@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Eyeshade (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Eyeshade (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

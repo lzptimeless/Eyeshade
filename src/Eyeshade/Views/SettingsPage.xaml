@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Eyeshade.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Eyeshade.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid>
+        <StackPanel Margin="8" Padding="12" 
+                    CornerRadius="{StaticResource ControlCornerRadius}"
+                    Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}">
+            <ComboBox Header="工作时长" PlaceholderText="选择工作时长" Width="150">
+                <x:Int32>15</x:Int32>
+                <x:Int32>30</x:Int32>
+                <x:Int32>45</x:Int32>
+                <x:Int32>60</x:Int32>
+            </ComboBox>
+            <ComboBox Header="休息时长" PlaceholderText="选择休息时长" Width="150" Margin="0,20,0,0">
+                <x:Int32>2</x:Int32>
+                <x:Int32>4</x:Int32>
+                <x:Int32>6</x:Int32>
+                <x:Int32>8</x:Int32>
+            </ComboBox>
+        </StackPanel>
+    </Grid>
+</Page>

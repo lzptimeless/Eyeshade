@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Eyeshade.Views.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Eyeshade.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid>
+        <StackPanel Grid.Row="1" VerticalAlignment="Center">
+            <TextBlock Text="工作中……/休息中……"
+                       TextAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,13"
+                           Text="还剩"/>
+                <TextBlock Style="{StaticResource DisplayTextBlockStyle}" 
+                           FontFamily="Consolas"
+                           Margin="8,0"
+                           Text="41"
+                           TextAlignment="Center"/>
+                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                           VerticalAlignment="Bottom"
+                           Margin="0,0,0,13"
+                           Text="分钟"/>
+            </StackPanel>
+            <ProgressBar Width="200"
+                         Margin="0,10,0,0"
+                         Value="15" 
+                         FlowDirection="RightToLeft"/>
+        </StackPanel>
+    </Grid>
+</Page>
