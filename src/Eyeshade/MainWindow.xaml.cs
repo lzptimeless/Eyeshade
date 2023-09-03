@@ -1,3 +1,4 @@
+using Eyeshade.TrayIcon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -30,18 +31,48 @@ namespace Eyeshade
         private static extern uint GetDpiForWindow([In] IntPtr hwnd);
         #endregion
 
+        #region fields
+        private readonly TrayIcon.TrayIcon _trayIcon;
+        #endregion
+
         public MainWindow()
         {
             this.InitializeComponent();
 
+            // 设置窗口大小
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var dpi = GetDpiForWindow(hwnd);
             var dpiRate = dpi / 96d;
             AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dpiRate), (int)(400 * dpiRate)));
 
+            // 设置自定义窗口标题栏
             this.ExtendsContentIntoTitleBar = true;  // enable custom titlebar
             this.SetTitleBar(AppTitleBar);      // set user ui element as titlebar
             AppWindow.SetIcon("logo.ico");
+
+            // 设置托盘图标
+            _trayIcon = new TrayIcon.TrayIcon(hwnd, 0);
+            _trayIcon.DoubleClicked += _trayIcon_DoubleClicked;
+
+            // 用户点击关闭按钮时执行隐藏窗口
+            AppWindow.Closing += AppWindow_Closing;
+        }
+
+        private void _trayIcon_DoubleClicked(object? sender, EventArgs e)
+        {
+            AppWindow.Show(true);
+        }
+
+        private void AppWindow_Closing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
+        {
+            AppWindow.Hide();
+            args.Cancel = true;
+        }
+
+        private void Root_Loaded(object sender, RoutedEventArgs e)
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            _trayIcon.Show(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.ico"), Title);
         }
 
         private void NavView_Loaded(object sender, RoutedEventArgs e)
@@ -66,8 +97,9 @@ namespace Eyeshade
             }
             else if (args.InvokedItemContainer != null)
             {
-                Type navPageType = Type.GetType(args.InvokedItemContainer.Tag.ToString());
-                NavView_Navigate(navPageType, args.RecommendedNavigationTransitionInfo);
+                var navPageType = Type.GetType(args.InvokedItemContainer.Tag.ToString()!);
+                if (navPageType != null)
+                    NavView_Navigate(navPageType, args.RecommendedNavigationTransitionInfo);
             }
         }
 
@@ -119,7 +151,7 @@ namespace Eyeshade
                 // Select the nav view item that corresponds to the page being navigated to.
                 NavView.SelectedItem = NavView.MenuItems
                             .OfType<NavigationViewItem>()
-                            .First(i => i.Tag.Equals(ContentFrame.SourcePageType.FullName.ToString()));
+                            .First(i => i.Tag.Equals(ContentFrame.SourcePageType.FullName?.ToString()));
 
                 if (ContentFrame.SourcePageType == typeof(Views.HomePage)) // 窗口太小了，Header太占空间，主页就不显示Header了
                     NavView.Header = null;

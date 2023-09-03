@@ -1,0 +1,6 @@
+﻿WM_LBUTTONDBLCLK
+WM_USER
+DefWindowProc
+LoadImage
+SetWindowSubclass
+Shell_NotifyIcon
