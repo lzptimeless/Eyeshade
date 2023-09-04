@@ -52,7 +52,11 @@ namespace Eyeshade
 
             // 设置托盘图标
             _trayIcon = new TrayIcon.TrayIcon(hwnd, 0);
+            _trayIcon.AddMenuItem(0, "关闭菜单");
+            _trayIcon.AddMenuItem(1, "打开主窗口");
+            _trayIcon.AddMenuItem(2, "退出");
             _trayIcon.DoubleClicked += _trayIcon_DoubleClicked;
+            _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
@@ -60,7 +64,21 @@ namespace Eyeshade
 
         private void _trayIcon_DoubleClicked(object? sender, EventArgs e)
         {
-            AppWindow.Show(true);
+            AppWindow.ShowOnceWithRequestedStartupState();
+        }
+
+        private void _trayIcon_MenuItemExecute(object? sender, MenuItemExecuteArgs e)
+        {
+            if (e.Id == 1)
+            {
+                // 打开主窗口
+                AppWindow.ShowOnceWithRequestedStartupState();
+            }
+            else if (e.Id == 2)
+            {
+                // 退出
+                Close();
+            }
         }
 
         private void AppWindow_Closing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)

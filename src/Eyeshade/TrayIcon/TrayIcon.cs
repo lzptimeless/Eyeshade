@@ -10,7 +10,7 @@ using Windows.Win32;
 
 namespace Eyeshade.TrayIcon
 {
-    public class TrayIcon : IDisposable
+    class TrayIcon : IDisposable
     {
         #region fields
         private Windows.Win32.UI.Shell.NOTIFYICONDATAW _notifyData;
@@ -19,6 +19,7 @@ namespace Eyeshade.TrayIcon
         private Win32Icon? _icon;
         private uint _wmMessageId;
         private Windows.Win32.UI.Shell.SUBCLASSPROC? _WndProc;
+        private Win32PopupMenu? _popupMenu;
         #endregion
 
         public TrayIcon(IntPtr hWnd, int id, uint wmMessageId = PInvoke.WM_USER + 1)
@@ -30,6 +31,7 @@ namespace Eyeshade.TrayIcon
 
         #region events
         public event EventHandler? DoubleClicked;
+        public event EventHandler<MenuItemExecuteArgs>? MenuItemExecute;
         #endregion
 
         #region public methods
@@ -74,6 +76,16 @@ namespace Eyeshade.TrayIcon
                 throw new Win32Exception();
         }
 
+        public bool AddMenuItem(int id, string content)
+        {
+            if (_popupMenu == null)
+            {
+                _popupMenu = new Win32PopupMenu();
+            }
+
+            return _popupMenu.AddMenuItem(id, content);
+        }
+
         public void Close()
         {
             var notifyData = new Windows.Win32.UI.Shell.NOTIFYICONDATAW()
@@ -94,6 +106,12 @@ namespace Eyeshade.TrayIcon
                 _WndProc = null;
             }
 
+            if (_popupMenu != null)
+            {
+                _popupMenu.Dispose();
+                _popupMenu = null;
+            }
+
             GC.SuppressFinalize(this);
         }
         #endregion
@@ -107,15 +125,26 @@ namespace Eyeshade.TrayIcon
         {
             if (uMsg == _wmMessageId)
             {
-                switch ((uint)((IntPtr)lParam).ToInt32())
+                switch ((uint)lParam.Value)
                 {
                     case PInvoke.WM_LBUTTONDBLCLK:
                         {
                             DoubleClicked?.Invoke(this, EventArgs.Empty);
                         }
                         break;
+                    case PInvoke.WM_RBUTTONUP:
+                        {
+                            _popupMenu?.Show(_hWnd);
+                        }
+                        break;
                     default: break;
                 }
+            }
+            else if (uMsg == PInvoke.WM_COMMAND)
+            {
+                var menuItemId = (int)(wParam & 0x0000FFFF); // LOWORD
+                if (_popupMenu?.ContainsMenuItemId(menuItemId) == true)
+                    MenuItemExecute?.Invoke(this, new MenuItemExecuteArgs(menuItemId));
             }
 
             return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -126,7 +155,7 @@ namespace Eyeshade.TrayIcon
     class Win32Icon : IDisposable
     {
         #region fields
-        private readonly Windows.Win32.UI.WindowsAndMessaging.HICON handle;
+        private Windows.Win32.UI.WindowsAndMessaging.HICON _handle;
         private readonly Microsoft.Win32.SafeHandles.SafeFileHandle? _fileHandle;
         #endregion
 
@@ -135,10 +164,10 @@ namespace Eyeshade.TrayIcon
             _fileHandle = fileHandle; //pin
             bool hInstanceAddRef = false;
             fileHandle.DangerousAddRef(ref hInstanceAddRef);
-            handle = new Windows.Win32.UI.WindowsAndMessaging.HICON(fileHandle.DangerousGetHandle());
+            _handle = new Windows.Win32.UI.WindowsAndMessaging.HICON(fileHandle.DangerousGetHandle());
         }
 
-        public Windows.Win32.UI.WindowsAndMessaging.HICON Handle => handle;
+        public Windows.Win32.UI.WindowsAndMessaging.HICON Handle => _handle;
 
         /// <summary>
         /// Loads an icon from an .ico file.
@@ -175,7 +204,82 @@ namespace Eyeshade.TrayIcon
         /// <param name="disposing"></param>
         protected void Dispose(bool disposing)
         {
-            PInvoke.DestroyIcon(Handle); // also closes filehandle
+            if (!_handle.IsNull)
+            {
+                PInvoke.DestroyIcon(_handle); // also closes filehandle
+                _handle = Windows.Win32.UI.WindowsAndMessaging.HICON.Null;
+            }
         }
+    }
+
+    class Win32PopupMenu : IDisposable
+    {
+        private Windows.Win32.UI.WindowsAndMessaging.HMENU _hMenu;
+        private readonly List<int> _menuItemIds = new List<int>();
+
+        public Win32PopupMenu()
+        {
+            _hMenu = PInvoke.CreatePopupMenu();
+            if (_hMenu.IsNull)
+                throw new Win32Exception();
+        }
+
+        public unsafe void Show(IntPtr hWnd)
+        {
+            if (!PInvoke.GetCursorPos(out Point cursor)) return;
+
+            PInvoke.TrackPopupMenu(_hMenu, Windows.Win32.UI.WindowsAndMessaging.TRACK_POPUP_MENU_FLAGS.TPM_LEFTALIGN,
+                cursor.X, cursor.Y, 0, new Windows.Win32.Foundation.HWND(hWnd), null);
+        }
+
+        public unsafe bool AddMenuItem(int id, string content)
+        {
+            fixed (char* lpNewItemLocal = content)
+            {
+                var result = PInvoke.AppendMenu(_hMenu, Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_STRING, new UIntPtr((uint)id), lpNewItemLocal);
+                if (result)
+                {
+                    _menuItemIds.Add(id);
+                }
+
+                return result;
+            }
+        }
+
+        public bool ContainsMenuItemId(int id)
+        {
+            return _menuItemIds.Contains(id);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~Win32PopupMenu()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_hMenu.IsNull)
+            {
+                // DestroyMenu 是递归的，也就是说，它将销毁菜单及其所有子菜单。
+                PInvoke.DestroyMenu(_hMenu);
+                _hMenu = Windows.Win32.UI.WindowsAndMessaging.HMENU.Null;
+            }
+        }
+    }
+
+    class MenuItemExecuteArgs : EventArgs
+    {
+        public MenuItemExecuteArgs(int id)
+        {
+            Id = id;
+        }
+
+        public int Id { get; private set; }
     }
 }

@@ -1,7 +1,14 @@
-﻿DefSubclassProc
+﻿AppendMenu
+CreatePopupMenu
+DefSubclassProc
+DestroyMenu
+GetCursorPos
 LoadImage
 RemoveWindowSubclass
 SetWindowSubclass
 Shell_NotifyIcon
+TrackPopupMenu
+WM_COMMAND
 WM_LBUTTONDBLCLK
+WM_RBUTTONUP
 WM_USER
