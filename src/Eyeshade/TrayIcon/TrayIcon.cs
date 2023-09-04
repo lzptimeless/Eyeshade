@@ -66,10 +66,12 @@ namespace Eyeshade.TrayIcon
                 szTip = tip,
                 uFlags = flags
             };
-            PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_ADD, _notifyData);
+            if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_ADD, _notifyData))
+                throw new Win32Exception();
 
             _WndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
-            PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0);
+            if (!PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0))
+                throw new Win32Exception();
         }
 
         public void Close()
@@ -86,6 +88,12 @@ namespace Eyeshade.TrayIcon
         public void Dispose()
         {
             _icon?.Dispose();
+            if (_WndProc != null)
+            {
+                PInvoke.RemoveWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0);
+                _WndProc = null;
+            }
+
             GC.SuppressFinalize(this);
         }
         #endregion
@@ -110,7 +118,7 @@ namespace Eyeshade.TrayIcon
                 }
             }
 
-            return PInvoke.DefWindowProc(hWnd, uMsg, wParam, lParam);
+            return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
         }
         #endregion
     }

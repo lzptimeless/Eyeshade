@@ -1,6 +1,7 @@
-﻿WM_LBUTTONDBLCLK
-WM_USER
-DefWindowProc
+﻿DefSubclassProc
 LoadImage
+RemoveWindowSubclass
 SetWindowSubclass
 Shell_NotifyIcon
+WM_LBUTTONDBLCLK
+WM_USER

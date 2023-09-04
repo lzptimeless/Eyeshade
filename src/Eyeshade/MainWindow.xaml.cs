@@ -71,10 +71,10 @@ namespace Eyeshade
 
         private void Root_Loaded(object sender, RoutedEventArgs e)
         {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             _trayIcon.Show(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.ico"), Title);
         }
 
+        #region Navigation
         private void NavView_Loaded(object sender, RoutedEventArgs e)
         {
             // Add handler for ContentFrame navigation.
@@ -159,5 +159,6 @@ namespace Eyeshade
                     NavView.Header = ((NavigationViewItem)NavView.SelectedItem)?.Content?.ToString();
             }
         }
+        #endregion
     }
 }
