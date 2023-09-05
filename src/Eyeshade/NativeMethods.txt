@@ -6,6 +6,7 @@ DestroyMenu
 GetCursorPos
 GetDpiForWindow
 IsIconic
+IsZoomed
 LoadImage
 RemoveWindowSubclass
 SetForegroundWindow

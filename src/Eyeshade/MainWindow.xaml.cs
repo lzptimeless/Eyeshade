@@ -71,10 +71,49 @@ namespace Eyeshade
         {
             _logger = logger;
             _alarmClockModule = new AlarmClockModule(logger);
+            _alarmClockModule.StateChanged += _alarmClockModule_StateChanged;
         }
 
         public AlarmClockModule? AlarmClockModule => _alarmClockModule;
 
+        private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (e.State == AlarmClockStates.Resting)
+                {
+                    ShowRestingWindow();
+                }
+                else
+                {
+                    CloseRestingWindow();
+                }
+            });
+        }
+
+        private void ShowRestingWindow()
+        {
+            Root.RequestedTheme = ElementTheme.Dark;
+            RestingBackground.Visibility = Visibility.Visible;
+            PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_MAXIMIZE);
+
+            // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
+            // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
+            // When a window that isn't part of the foreground process tries
+            // to use SetWindowPos with HWND_TOP, Windows will not allow the
+            // window to appear on top of the foreground window
+            // AppWindow.MoveInZOrderAtTop();
+            PInvoke.SetForegroundWindow(new HWND(_hWnd));
+        }
+
+        private void CloseRestingWindow()
+        {
+            Root.RequestedTheme = ElementTheme.Default;
+            RestingBackground.Visibility = Visibility.Collapsed;
+            AppWindow.Hide();
+        }
+
+        #region TrayIcon
         private void _trayIcon_Clicked(object? sender, EventArgs e)
         {
             if (AppWindow.IsVisible)
@@ -119,17 +158,18 @@ namespace Eyeshade
         /// </summary>
         private void ShowNearToTrayIcon()
         {
+            if (PInvoke.IsIconic(new HWND(_hWnd)) || PInvoke.IsZoomed(new HWND(_hWnd))) // 窗口是否最小化或最大化
+            {
+                PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
+            }
+
             var size = AppWindow.Size;
             var position = _trayIcon.CalculatePopupWindowPosition(size.Width, size.Height);
             AppWindow.Move(new Windows.Graphics.PointInt32(position.X, position.Y));
+
             if (!AppWindow.IsVisible)
             {
                 AppWindow.Show(true);
-            }
-
-            if (PInvoke.IsIconic(new HWND(_hWnd))) // 窗口是否最小化
-            {
-                PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
             }
 
             // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
@@ -140,6 +180,7 @@ namespace Eyeshade
             // AppWindow.MoveInZOrderAtTop();
             PInvoke.SetForegroundWindow(new HWND(_hWnd));
         }
+        #endregion
 
         #region Navigation
         private void NavView_Loaded(object sender, RoutedEventArgs e)

@@ -37,7 +37,7 @@ namespace Eyeshade.Modules
         #endregion
 
         #region events
-        public EventHandler<AlarmClockStateChangedArgs>? StateChanged;
+        public event EventHandler<AlarmClockStateChangedArgs>? StateChanged;
         #endregion
 
         #region public methods
