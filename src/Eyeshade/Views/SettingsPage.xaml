@@ -11,13 +11,15 @@
         <StackPanel Margin="8" Padding="12" 
                     CornerRadius="{StaticResource ControlCornerRadius}"
                     Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}">
-            <ComboBox Header="工作时长" PlaceholderText="选择工作时长" Width="150">
+            <ComboBox Header="工作时长（分）" PlaceholderText="选择工作时长" Width="150"
+                      SelectedValue="{x:Bind Data.WorkTime, Mode=TwoWay}">
                 <x:Int32>15</x:Int32>
                 <x:Int32>30</x:Int32>
                 <x:Int32>45</x:Int32>
                 <x:Int32>60</x:Int32>
             </ComboBox>
-            <ComboBox Header="休息时长" PlaceholderText="选择休息时长" Width="150" Margin="0,20,0,0">
+            <ComboBox Header="休息时长（分）" PlaceholderText="选择休息时长" Width="150" Margin="0,20,0,0"
+                      SelectedValue="{x:Bind Data.RestingTime, Mode=TwoWay}">
                 <x:Int32>2</x:Int32>
                 <x:Int32>4</x:Int32>
                 <x:Int32>6</x:Int32>

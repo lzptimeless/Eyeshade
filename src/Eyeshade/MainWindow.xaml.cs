@@ -1,3 +1,5 @@
+using Eyeshade.Log;
+using Eyeshade.Modules;
 using Eyeshade.TrayIcon;
 using Microsoft.Graphics.Display;
 using Microsoft.UI.Xaml;
@@ -31,14 +33,11 @@ namespace Eyeshade
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        #region native
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetDpiForWindow([In] IntPtr hwnd);
-        #endregion
-
         #region fields
         private readonly TrayIcon.TrayIcon _trayIcon;
         private readonly IntPtr _hWnd;
+        private ILogWrapper? _logger;
+        private AlarmClockModule? _alarmClockModule;
         #endregion
 
         public MainWindow()
@@ -47,7 +46,7 @@ namespace Eyeshade
 
             // 设置窗口大小
             _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            var dpi = GetDpiForWindow(_hWnd);
+            var dpi = PInvoke.GetDpiForWindow(new HWND(_hWnd));
             var dpiRate = dpi / 96d;
             AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dpiRate), (int)(400 * dpiRate)));
 
@@ -67,6 +66,14 @@ namespace Eyeshade
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
         }
+
+        public MainWindow(ILogWrapper logger) : this()
+        {
+            _logger = logger;
+            _alarmClockModule = new AlarmClockModule(logger);
+        }
+
+        public AlarmClockModule? AlarmClockModule => _alarmClockModule;
 
         private void _trayIcon_Clicked(object? sender, EventArgs e)
         {
@@ -205,6 +212,11 @@ namespace Eyeshade
                 // SettingsItem is not part of NavView.MenuItems, and doesn't have a Tag.
                 NavView.SelectedItem = (NavigationViewItem)NavView.SettingsItem;
                 NavView.Header = "设置";
+                var settingsPage = ContentFrame.Content as Views.SettingsPage;
+                if (settingsPage != null)
+                {
+                    settingsPage.AlarmClockModule = AlarmClockModule;
+                }
             }
             else if (ContentFrame.SourcePageType != null)
             {
@@ -214,9 +226,18 @@ namespace Eyeshade
                             .First(i => i.Tag.Equals(ContentFrame.SourcePageType.FullName?.ToString()));
 
                 if (ContentFrame.SourcePageType == typeof(Views.HomePage)) // 窗口太小了，Header太占空间，主页就不显示Header了
+                {
                     NavView.Header = null;
+                    var homePage = ContentFrame.Content as Views.HomePage;
+                    if (homePage != null)
+                    {
+                        homePage.AlarmClockModule = AlarmClockModule;
+                    }
+                }
                 else
+                {
                     NavView.Header = ((NavigationViewItem)NavView.SelectedItem)?.Content?.ToString();
+                }
             }
         }
         #endregion

@@ -4,6 +4,7 @@ CreatePopupMenu
 DefSubclassProc
 DestroyMenu
 GetCursorPos
+GetDpiForWindow
 IsIconic
 LoadImage
 RemoveWindowSubclass

@@ -6,10 +6,12 @@
     xmlns:local="using:Eyeshade.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
-    <Grid>
+    mc:Ignorable="d"
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded">
+    <Grid x:Name="Root">
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
-            <TextBlock Text="工作中……/休息中……"
+            <TextBlock Text="{x:Bind Data.StateTitle, Mode=OneWay}"
                        TextAlignment="Center"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
@@ -19,16 +21,17 @@
                 <TextBlock Style="{StaticResource DisplayTextBlockStyle}" 
                            FontFamily="Consolas"
                            Margin="8,0"
-                           Text="41"
+                           Text="{x:Bind Data.CountdownText, Mode=OneWay}"
                            TextAlignment="Center"/>
                 <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
                            VerticalAlignment="Bottom"
                            Margin="0,0,0,13"
-                           Text="分钟"/>
+                           Text="{x:Bind Data.CountdownUnit, Mode=OneWay}"/>
             </StackPanel>
             <ProgressBar Width="200"
                          Margin="0,10,0,0"
-                         Value="15" 
+                         Value="{x:Bind Data.CountdownProgressValue, Mode=OneWay}"
+                         Minimum="0" Maximum="100"
                          FlowDirection="RightToLeft"/>
         </StackPanel>
     </Grid>

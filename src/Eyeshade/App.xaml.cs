@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml;
+﻿using Eyeshade.Log;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
@@ -26,13 +27,24 @@ namespace Eyeshade
     /// </summary>
     public partial class App : Application
     {
+        private Window? m_window;
+        private readonly ILogWrapper m_logWrapper;
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
         public App()
         {
+            m_logWrapper = new NLogWrapper("log.txt");
+            UnhandledException += App_UnhandledException;
+
             this.InitializeComponent();
+        }
+
+        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            m_logWrapper.Error(e.Exception, "App crashed.");
         }
 
         /// <summary>
@@ -41,10 +53,8 @@ namespace Eyeshade
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow();
+            m_window = new MainWindow(m_logWrapper);
             m_window.Activate();
         }
-
-        private Window? m_window;
     }
 }
