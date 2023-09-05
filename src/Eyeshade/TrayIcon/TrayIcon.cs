@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Win32;
+using Windows.Win32.Foundation;
 
 namespace Eyeshade.TrayIcon
 {
@@ -30,8 +31,9 @@ namespace Eyeshade.TrayIcon
         }
 
         #region events
+        public event EventHandler? Clicked;
         public event EventHandler? DoubleClicked;
-        public event EventHandler<MenuItemExecuteArgs>? MenuItemExecute;
+        public event EventHandler<TrayIconMenuItemExecuteArgs>? MenuItemExecute;
         #endregion
 
         #region public methods
@@ -39,6 +41,9 @@ namespace Eyeshade.TrayIcon
         {
             Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS flags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE;
             Windows.Win32.UI.WindowsAndMessaging.HICON hIcon = new Windows.Win32.UI.WindowsAndMessaging.HICON(IntPtr.Zero);
+
+            _icon?.Dispose(); // Release old ico
+            _icon = null;
             if (!string.IsNullOrEmpty(icoFilePath))
             {
                 flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
@@ -50,7 +55,7 @@ namespace Eyeshade.TrayIcon
             if (!string.IsNullOrEmpty(tooltip))
             {
                 flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_TIP;
-                for (int i = 0; i < tooltip.Length && i < tip.Length; i++)
+                for (int i = 0; i < tooltip.Length && i < tip.Length - 1; i++)
                 {
                     tip[i] = tooltip[i];
                 }
@@ -71,9 +76,12 @@ namespace Eyeshade.TrayIcon
             if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_ADD, _notifyData))
                 throw new Win32Exception();
 
-            _WndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
-            if (!PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0))
-                throw new Win32Exception();
+            if (_WndProc == null)
+            {
+                _WndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
+                if (!PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0))
+                    throw new Win32Exception();
+            }
         }
 
         public bool AddMenuItem(int id, string content)
@@ -95,6 +103,28 @@ namespace Eyeshade.TrayIcon
                 uID = _uid
             };
             PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_DELETE, notifyData);
+        }
+
+        public RECT CalculatePopupWindowPosition(int windowWidth, int windowHeight)
+        {
+            Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER id = new Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER()
+            {
+                cbSize = (uint)Marshal.SizeOf<Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER>(),
+                hWnd = new HWND(_hWnd),
+                uID = _uid,
+                guidItem = Guid.Empty
+            };
+            var hResult = PInvoke.Shell_NotifyIconGetRect(id, out var iconLocation);
+            if (!hResult.Succeeded)
+                throw new Win32Exception(hResult);
+
+            Point anchorPoint = new Point(iconLocation.X + iconLocation.Width / 2, iconLocation.Y + iconLocation.Height / 2);
+            const uint TPM_CENTERALIGN = 0x0004;
+            const uint TPM_WORKAREA = 0x10000;
+            if (!PInvoke.CalculatePopupWindowPosition(anchorPoint, new SIZE(windowWidth, windowHeight), TPM_CENTERALIGN | TPM_WORKAREA, null, out var popupPosition))
+                throw new Win32Exception();
+
+            return popupPosition;
         }
 
         public void Dispose()
@@ -132,6 +162,11 @@ namespace Eyeshade.TrayIcon
                             DoubleClicked?.Invoke(this, EventArgs.Empty);
                         }
                         break;
+                    case PInvoke.WM_LBUTTONUP:
+                        {
+                            Clicked?.Invoke(this, EventArgs.Empty);
+                        }
+                        break;
                     case PInvoke.WM_RBUTTONUP:
                         {
                             _popupMenu?.Show(_hWnd);
@@ -144,7 +179,7 @@ namespace Eyeshade.TrayIcon
             {
                 var menuItemId = (int)(wParam & 0x0000FFFF); // LOWORD
                 if (_popupMenu?.ContainsMenuItemId(menuItemId) == true)
-                    MenuItemExecute?.Invoke(this, new MenuItemExecuteArgs(menuItemId));
+                    MenuItemExecute?.Invoke(this, new TrayIconMenuItemExecuteArgs(menuItemId));
             }
 
             return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -273,9 +308,9 @@ namespace Eyeshade.TrayIcon
         }
     }
 
-    class MenuItemExecuteArgs : EventArgs
+    class TrayIconMenuItemExecuteArgs : EventArgs
     {
-        public MenuItemExecuteArgs(int id)
+        public TrayIconMenuItemExecuteArgs(int id)
         {
             Id = id;
         }

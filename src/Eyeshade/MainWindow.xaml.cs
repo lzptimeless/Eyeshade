@@ -1,4 +1,5 @@
 using Eyeshade.TrayIcon;
+using Microsoft.Graphics.Display;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -9,12 +10,16 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.UI.ViewManagement;
+using Windows.Win32;
+using Windows.Win32.Foundation;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -33,6 +38,7 @@ namespace Eyeshade
 
         #region fields
         private readonly TrayIcon.TrayIcon _trayIcon;
+        private readonly IntPtr _hWnd;
         #endregion
 
         public MainWindow()
@@ -40,8 +46,8 @@ namespace Eyeshade
             this.InitializeComponent();
 
             // 设置窗口大小
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            var dpi = GetDpiForWindow(hwnd);
+            _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var dpi = GetDpiForWindow(_hWnd);
             var dpiRate = dpi / 96d;
             AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dpiRate), (int)(400 * dpiRate)));
 
@@ -51,28 +57,35 @@ namespace Eyeshade
             AppWindow.SetIcon("logo.ico");
 
             // 设置托盘图标
-            _trayIcon = new TrayIcon.TrayIcon(hwnd, 0);
-            _trayIcon.AddMenuItem(0, "关闭菜单");
+            _trayIcon = new TrayIcon.TrayIcon(_hWnd, 0);
+            _trayIcon.AddMenuItem(0, "关闭菜单"); // 这个选项触发时什么也不做
             _trayIcon.AddMenuItem(1, "打开主窗口");
             _trayIcon.AddMenuItem(2, "退出");
-            _trayIcon.DoubleClicked += _trayIcon_DoubleClicked;
+            _trayIcon.Clicked += _trayIcon_Clicked;
             _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
         }
 
-        private void _trayIcon_DoubleClicked(object? sender, EventArgs e)
+        private void _trayIcon_Clicked(object? sender, EventArgs e)
         {
-            AppWindow.ShowOnceWithRequestedStartupState();
+            if (AppWindow.IsVisible)
+            {
+                AppWindow.Hide();
+            }
+            else
+            {
+                ShowNearToTrayIcon();
+            }
         }
 
-        private void _trayIcon_MenuItemExecute(object? sender, MenuItemExecuteArgs e)
+        private void _trayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)
         {
             if (e.Id == 1)
             {
                 // 打开主窗口
-                AppWindow.ShowOnceWithRequestedStartupState();
+                ShowNearToTrayIcon();
             }
             else if (e.Id == 2)
             {
@@ -83,13 +96,42 @@ namespace Eyeshade
 
         private void AppWindow_Closing(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowClosingEventArgs args)
         {
+            // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Hide();
             args.Cancel = true;
         }
 
         private void Root_Loaded(object sender, RoutedEventArgs e)
         {
+            // 显示托盘图标
             _trayIcon.Show(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.ico"), Title);
+        }
+
+        /// <summary>
+        /// 在托盘附近显示窗口
+        /// </summary>
+        private void ShowNearToTrayIcon()
+        {
+            var size = AppWindow.Size;
+            var position = _trayIcon.CalculatePopupWindowPosition(size.Width, size.Height);
+            AppWindow.Move(new Windows.Graphics.PointInt32(position.X, position.Y));
+            if (!AppWindow.IsVisible)
+            {
+                AppWindow.Show(true);
+            }
+
+            if (PInvoke.IsIconic(new HWND(_hWnd))) // 窗口是否最小化
+            {
+                PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
+            }
+
+            // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
+            // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
+            // When a window that isn't part of the foreground process tries
+            // to use SetWindowPos with HWND_TOP, Windows will not allow the
+            // window to appear on top of the foreground window
+            // AppWindow.MoveInZOrderAtTop();
+            PInvoke.SetForegroundWindow(new HWND(_hWnd));
         }
 
         #region Navigation
