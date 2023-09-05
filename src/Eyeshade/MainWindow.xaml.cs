@@ -39,26 +39,26 @@ namespace Eyeshade
         {
             this.InitializeComponent();
 
-            // ÉèÖÃ´°¿Ú´óĞ¡
+            // è®¾ç½®çª—å£å¤§å°
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var dpi = GetDpiForWindow(hwnd);
             var dpiRate = dpi / 96d;
             AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dpiRate), (int)(400 * dpiRate)));
 
-            // ÉèÖÃ×Ô¶¨Òå´°¿Ú±êÌâÀ¸
+            // è®¾ç½®è‡ªå®šä¹‰çª—å£æ ‡é¢˜æ 
             this.ExtendsContentIntoTitleBar = true;  // enable custom titlebar
             this.SetTitleBar(AppTitleBar);      // set user ui element as titlebar
             AppWindow.SetIcon("logo.ico");
 
-            // ÉèÖÃÍĞÅÌÍ¼±ê
+            // è®¾ç½®æ‰˜ç›˜å›¾æ ‡
             _trayIcon = new TrayIcon.TrayIcon(hwnd, 0);
-            _trayIcon.AddMenuItem(0, "¹Ø±Õ²Ëµ¥");
-            _trayIcon.AddMenuItem(1, "´ò¿ªÖ÷´°¿Ú");
-            _trayIcon.AddMenuItem(2, "ÍË³ö");
+            _trayIcon.AddMenuItem(0, "å…³é—­èœå•");
+            _trayIcon.AddMenuItem(1, "æ‰“å¼€ä¸»çª—å£");
+            _trayIcon.AddMenuItem(2, "é€€å‡º");
             _trayIcon.DoubleClicked += _trayIcon_DoubleClicked;
             _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
 
-            // ÓÃ»§µã»÷¹Ø±Õ°´Å¥Ê±Ö´ĞĞÒş²Ø´°¿Ú
+            // ç”¨æˆ·ç‚¹å‡»å…³é—­æŒ‰é’®æ—¶æ‰§è¡Œéšè—çª—å£
             AppWindow.Closing += AppWindow_Closing;
         }
 
@@ -71,12 +71,12 @@ namespace Eyeshade
         {
             if (e.Id == 1)
             {
-                // ´ò¿ªÖ÷´°¿Ú
+                // æ‰“å¼€ä¸»çª—å£
                 AppWindow.ShowOnceWithRequestedStartupState();
             }
             else if (e.Id == 2)
             {
-                // ÍË³ö
+                // é€€å‡º
                 Close();
             }
         }
@@ -162,7 +162,7 @@ namespace Eyeshade
             {
                 // SettingsItem is not part of NavView.MenuItems, and doesn't have a Tag.
                 NavView.SelectedItem = (NavigationViewItem)NavView.SettingsItem;
-                NavView.Header = "ÉèÖÃ";
+                NavView.Header = "è®¾ç½®";
             }
             else if (ContentFrame.SourcePageType != null)
             {
@@ -171,7 +171,7 @@ namespace Eyeshade
                             .OfType<NavigationViewItem>()
                             .First(i => i.Tag.Equals(ContentFrame.SourcePageType.FullName?.ToString()));
 
-                if (ContentFrame.SourcePageType == typeof(Views.HomePage)) // ´°¿ÚÌ«Ğ¡ÁË£¬HeaderÌ«Õ¼¿Õ¼ä£¬Ö÷Ò³¾Í²»ÏÔÊ¾HeaderÁË
+                if (ContentFrame.SourcePageType == typeof(Views.HomePage)) // çª—å£å¤ªå°äº†ï¼ŒHeaderå¤ªå ç©ºé—´ï¼Œä¸»é¡µå°±ä¸æ˜¾ç¤ºHeaderäº†
                     NavView.Header = null;
                 else
                     NavView.Header = ((NavigationViewItem)NavView.SelectedItem)?.Content?.ToString();
