@@ -15,25 +15,47 @@ namespace Eyeshade.Modules
         private readonly ILogWrapper? _logger;
         private readonly AlarmClockConfig _userConfig;
         private readonly Timer _timer;
-        private DateTime _timerChangeTime;
+        private DateTime _timerStartTime;
         private TimeSpan _timerDueTime;
+        private bool _timerIsPaused;
+        /// <summary>
+        /// WorkTime or RestingTime
+        /// </summary>
+        private TimeSpan _totalTime;
+        private AlarmClockStates _state;
         #endregion
 
         public AlarmClockModule(ILogWrapper? logger)
         {
             _logger = logger;
             _userConfig = new AlarmClockConfig(logger);
-            _timerDueTime = _userConfig.WorkTime;
+            _state = AlarmClockStates.Work;
+            _totalTime = _userConfig.WorkTime;
+            _timerDueTime = _totalTime;
             _timer = new Timer(CountdownCallback, null, _timerDueTime, Timeout.InfiniteTimeSpan);
-            _timerChangeTime = DateTime.Now;
+            _timerStartTime = DateTime.Now;
         }
 
         #region properties
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
-        public TimeSpan CurrentDueTime => _timerDueTime;
-        public TimeSpan RemainingTime => _timerDueTime - (DateTime.Now - _timerChangeTime);
-        public AlarmClockStates State { get; private set; }
+        public TimeSpan TotalTime => _totalTime;
+        public TimeSpan RemainingTime
+        {
+            get
+            {
+                if (_timerIsPaused)
+                {
+                    return _timerDueTime;
+                }
+                else
+                {
+                    return _timerDueTime - (DateTime.Now - _timerStartTime);
+                }
+            }
+        }
+        public bool IsPaused => _timerIsPaused;
+        public AlarmClockStates State => _state;
         #endregion
 
         #region events
@@ -41,86 +63,121 @@ namespace Eyeshade.Modules
         #endregion
 
         #region public methods
+        public void SetTotalTime(TimeSpan value)
+        {
+            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minute");
+
+            var remaining = RemainingTime;
+            _logger?.Info($"Set TotalTime {value}, remaining: {remaining}");
+
+            if (value < remaining)
+            {
+                remaining = value;
+            }
+
+            _totalTime = value;
+            _timerDueTime = remaining;
+            if (!_timerIsPaused)
+            {
+                _timer.Change(remaining, Timeout.InfiniteTimeSpan);
+                _timerStartTime = DateTime.Now;
+            }
+        }
+
         public void Defer(TimeSpan value)
         {
-            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minutes");
+            var remaining = RemainingTime;
+            _logger?.Info($"Defer {value}, remaining: {remaining}");
 
-            _logger?.Info($"Defer {value}");
-            _timerDueTime = RemainingTime + value;
+            remaining += value;
+            if (_totalTime < remaining)
+            {
+                remaining = _totalTime;
+            }
+
+            if (remaining < TimeSpan.FromMinutes(1))
+            {
+                remaining = TimeSpan.FromMinutes(1);
+            }
+
+            _timerDueTime = remaining;
+            if (!_timerIsPaused)
+            {
+                _timer.Change(remaining, Timeout.InfiniteTimeSpan);
+                _timerStartTime = DateTime.Now;
+            }
+        }
+
+        public void WorkOrRest()
+        {
+            _logger?.Info("WorkOrRest.");
+            CountdownCallback(null);
+        }
+
+        public void Pause()
+        {
+            if (_timerIsPaused) return;
+
+            var remaining = RemainingTime;
+            _logger?.Info($"Pause, remaining: {remaining}");
+            _timerDueTime = remaining;
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            _timerIsPaused = true;
+        }
+
+        public void Resume()
+        {
+            if (!_timerIsPaused) return;
+
+            var remaining = RemainingTime;
+            _logger?.Info($"Resume, remaining: {remaining}");
+            _timerDueTime = remaining;
             _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
-            _timerChangeTime = DateTime.Now;
+            _timerStartTime = DateTime.Now;
+            _timerIsPaused = false;
         }
 
         public void SetWorkTime(TimeSpan value)
         {
-            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minutes");
+            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minute");
             if (WorkTime == value) return;
 
-            _logger?.Info($"SetWorkTime {value}");
-            var increment = value - WorkTime;
+            _logger?.Info($"Set WorkTime {value}");
             _userConfig.WorkTime = value;
+            _userConfig.Save();
             if (State == AlarmClockStates.Work)
             {
-                var remainingTime = RemainingTime + increment;
-                if (remainingTime.TotalMinutes > 1)
-                {
-                    _timerDueTime = remainingTime;
-                }
-                else
-                {
-                    _timerDueTime = TimeSpan.FromMinutes(1);
-                }
-                _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
-                _timerChangeTime = DateTime.Now;
+                SetTotalTime(value);
             }
-            _userConfig.Save();
         }
 
         public void SetRestingTime(TimeSpan value)
         {
-            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minutes");
+            if (value.TotalMinutes < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must bigger than or equal to 1 minute");
             if (RestingTime == value) return;
 
-            _logger?.Info($"SetRestingTime {value}");
-            var increment = value - RestingTime;
+            _logger?.Info($"Set RestingTime {value}");
             _userConfig.RestingTime = value;
+            _userConfig.Save();
             if (State == AlarmClockStates.Resting)
             {
-                var remainingTime = RemainingTime - increment;
-                if (remainingTime.TotalMinutes > 1)
-                {
-                    _timerDueTime = remainingTime;
-                }
-                else
-                {
-                    _timerDueTime = TimeSpan.FromMinutes(1);
-                }
-                _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
-                _timerChangeTime = DateTime.Now;
+                SetTotalTime(value);
             }
-            _userConfig.Save();
         }
         #endregion
 
         #region private methods
         private void CountdownCallback(object? state)
         {
-            if (State == AlarmClockStates.Work)
-            {
-                State = AlarmClockStates.Resting;
-                _timerDueTime = RestingTime;
-            }
-            else
-            {
-                State = AlarmClockStates.Work;
-                _timerDueTime = WorkTime;
-            }
-
+            _state = _state == AlarmClockStates.Work ? AlarmClockStates.Resting : AlarmClockStates.Work;
+            _totalTime = _state == AlarmClockStates.Work ? _userConfig.WorkTime : _userConfig.RestingTime;
+            _timerDueTime = _totalTime;
             _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
-            _timerChangeTime = DateTime.Now;
-            _logger?.Info($"Change state to: {State}, dueTime: {_timerDueTime}");
+            _timerStartTime = DateTime.Now;
 
-            StateChanged?.Invoke(this, new AlarmClockStateChangedArgs(State));
+            _logger?.Info($"Change state to: {_state}, TotalTime: {_totalTime}");
+
+            StateChanged?.Invoke(this, new AlarmClockStateChangedArgs(_state));
         }
         #endregion
     }

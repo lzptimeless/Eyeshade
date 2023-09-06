@@ -64,8 +64,81 @@ namespace Eyeshade.Views
             if (module == null) return;
 
             Data.RemainingTime = module.RemainingTime;
-            Data.CountdownProgressValue = Math.Max(0, (int)(100 * module.RemainingTime.TotalMinutes / module.CurrentDueTime.TotalMinutes));
+            Data.CountdownProgressValue = Math.Max(0, (int)(100 * module.RemainingTime.TotalMinutes / module.TotalTime.TotalMinutes));
+            Data.IsPaused = module.IsPaused;
             Data.AlarmClockState = module.State;
+
+            if (module.IsPaused)
+            {
+                if (PauseOrResumeCommand.Label != "恢复")
+                {
+                    PauseOrResumeCommand.Label = "恢复";
+                    PauseOrResumeCommand.IconSource = new SymbolIconSource() { Symbol = Symbol.Play };
+                }
+            }
+            else
+            {
+                if (PauseOrResumeCommand.Label != "暂停")
+                {
+                    PauseOrResumeCommand.Label = "暂停";
+                    PauseOrResumeCommand.IconSource = new SymbolIconSource() { Symbol = Symbol.Pause };
+                }
+            }
+
+            if (module.State == AlarmClockStates.Work)
+            {
+                if (WorkOrRestCommand.Label != "休息")
+                {
+                    WorkOrRestCommand.Label = "休息";
+                    WorkOrRestCommand.IconSource = new FontIconSource() { Glyph= "\uE708" };
+                }
+            }
+            else
+            {
+                if (WorkOrRestCommand.Label != "工作")
+                {
+                    WorkOrRestCommand.Label = "工作";
+                    WorkOrRestCommand.IconSource = new FontIconSource() { Glyph = "\uE706" };
+                }
+            }
+        }
+
+        private void DeferCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        {
+            var module = AlarmClockModule;
+            if (module == null) return;
+
+            if (args.Parameter is int)
+            {
+                var deferMinutes = (int)args.Parameter;
+                module.Defer(TimeSpan.FromMinutes(deferMinutes));
+                ReadData();
+            }
+        }
+
+        private void PauseOrResumeCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        {
+            var module = AlarmClockModule;
+            if (module == null) return;
+
+            if (module.IsPaused)
+            {
+                module.Resume();
+            }
+            else
+            {
+                module.Pause();
+            }
+            ReadData();
+        }
+
+        private void RestCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        {
+            var module = AlarmClockModule;
+            if (module == null) return;
+
+            module.WorkOrRest();
+            ReadData();
         }
     }
 
@@ -81,13 +154,13 @@ namespace Eyeshade.Views
                 {
                     _remainingTime = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(CountdownText));
+                    OnPropertyChanged(nameof(Countdown));
                     OnPropertyChanged(nameof(CountdownUnit));
                 }
             }
         }
 
-        public string CountdownText
+        public int Countdown
         {
             get
             {
@@ -95,7 +168,7 @@ namespace Eyeshade.Views
                 if (_remainingTime.TotalMinutes > 1) countdown = (int)Math.Round(_remainingTime.TotalMinutes);
                 else countdown = (int)_remainingTime.TotalSeconds;
 
-                return countdown.ToString("00");
+                return countdown;
             }
         }
 
@@ -103,7 +176,14 @@ namespace Eyeshade.Views
         {
             get
             {
-                return _remainingTime.TotalMinutes > 1 ? "分 " : "秒 ";
+                if (_remainingTime.TotalMinutes > 1)
+                {
+                    return $"分 {_remainingTime.Seconds} 秒";
+                }
+                else
+                {
+                    return "秒";
+                }
             }
         }
 
@@ -121,6 +201,20 @@ namespace Eyeshade.Views
             }
         }
 
+        private bool _isPaused;
+        public bool IsPaused
+        {
+            get { return _isPaused; }
+            set
+            {
+                if (_isPaused != value)
+                {
+                    _isPaused = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private AlarmClockStates _alarmClockState;
         public AlarmClockStates AlarmClockState
         {
@@ -132,9 +226,12 @@ namespace Eyeshade.Views
                     _alarmClockState = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(StateTitle));
+                    OnPropertyChanged(nameof(IsResting));
                 }
             }
         }
+
+        public bool IsResting => _alarmClockState == AlarmClockStates.Resting;
 
         public string StateTitle
         {

@@ -9,30 +9,76 @@
     mc:Ignorable="d"
     Loaded="Page_Loaded"
     Unloaded="Page_Unloaded">
+    <Page.Resources>
+        <XamlUICommand x:Name="DeferCommand" Label="推迟" ExecuteRequested="DeferCommand_ExecuteRequested">
+        </XamlUICommand>
+        <XamlUICommand x:Name="PauseOrResumeCommand" Label="暂停" ExecuteRequested="PauseOrResumeCommand_ExecuteRequested">
+            <XamlUICommand.IconSource>
+                <SymbolIconSource Symbol="Pause"/>
+            </XamlUICommand.IconSource>
+        </XamlUICommand>
+        <XamlUICommand x:Name="WorkOrRestCommand" Label="休息" ExecuteRequested="RestCommand_ExecuteRequested">
+            <XamlUICommand.IconSource>
+                <FontIconSource Glyph="&#xE708;" />
+            </XamlUICommand.IconSource>
+        </XamlUICommand>
+    </Page.Resources>
     <Grid x:Name="Root">
         <StackPanel Grid.Row="1" VerticalAlignment="Center">
             <TextBlock Text="{x:Bind Data.StateTitle, Mode=OneWay}"
                        TextAlignment="Center"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Style="{StaticResource CaptionTextBlockStyle}"
                            VerticalAlignment="Bottom"
+                           HorizontalAlignment="Right"
                            Margin="0,0,0,13"
                            Text="还剩"/>
-                <TextBlock Style="{StaticResource DisplayTextBlockStyle}" 
+                <TextBlock Grid.Column="1" Style="{StaticResource DisplayTextBlockStyle}" 
                            FontFamily="Consolas"
                            Margin="8,0"
-                           Text="{x:Bind Data.CountdownText, Mode=OneWay}"
+                           Text="{x:Bind Data.Countdown, Mode=OneWay}"
                            TextAlignment="Center"/>
-                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                <TextBlock Grid.Column="2" Style="{StaticResource CaptionTextBlockStyle}"
                            VerticalAlignment="Bottom"
+                           HorizontalAlignment="Left"
                            Margin="0,0,0,13"
                            Text="{x:Bind Data.CountdownUnit, Mode=OneWay}"/>
-            </StackPanel>
+            </Grid>
             <ProgressBar Width="200"
                          Margin="0,10,0,0"
                          Value="{x:Bind Data.CountdownProgressValue, Mode=OneWay}"
                          Minimum="0" Maximum="100"
                          FlowDirection="RightToLeft"/>
+            <CommandBar DefaultLabelPosition="Collapsed" HorizontalAlignment="Center">
+                <AppBarButton Icon="Add">
+                    <AppBarButton.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <MenuFlyoutItem Text="推迟8分钟" Command="{StaticResource DeferCommand}">
+                                <MenuFlyoutItem.CommandParameter>
+                                    <x:Int32>8</x:Int32>
+                                </MenuFlyoutItem.CommandParameter>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="推迟15分钟" Command="{StaticResource DeferCommand}">
+                                <MenuFlyoutItem.CommandParameter>
+                                    <x:Int32>15</x:Int32>
+                                </MenuFlyoutItem.CommandParameter>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="推迟30分钟" Command="{StaticResource DeferCommand}">
+                                <MenuFlyoutItem.CommandParameter>
+                                    <x:Int32>30</x:Int32>
+                                </MenuFlyoutItem.CommandParameter>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </AppBarButton.Flyout>
+                </AppBarButton>
+                <AppBarToggleButton Command="{StaticResource PauseOrResumeCommand}" IsChecked="{x:Bind Data.IsPaused, Mode=OneWay}"/>
+                <AppBarToggleButton Command="{StaticResource WorkOrRestCommand}" IsChecked="{x:Bind Data.IsResting, Mode=OneWay}"/>
+            </CommandBar>
         </StackPanel>
     </Grid>
 </Page>
