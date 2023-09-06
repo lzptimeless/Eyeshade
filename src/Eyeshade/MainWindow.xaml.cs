@@ -101,20 +101,32 @@ namespace Eyeshade
 
         private void _alarmClockModule_ProgressChanged(object? sender, AlarmClockProgressChangedArgs e)
         {
-            var module = sender as AlarmClockModule;
-            if (module != null)
+            DispatcherQueue.TryEnqueue(() =>
             {
-                UpdateTrayIcon(module.State, module.IsPaused, e.Progress);
-            }
+                var module = sender as AlarmClockModule;
+                if (module != null)
+                {
+                    var state = module.State;
+                    UpdateTrayIcon(state, module.IsPaused, e.Progress);
+
+                    if (state == AlarmClockStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
+                    {
+                        ShowNearToTrayIcon();
+                    }
+                }
+            });
         }
 
         private void _alarmClockModule_IsPausedChanged(object? sender, AlarmClockIsPausedChangedArgs e)
         {
-            var module = sender as AlarmClockModule;
-            if (module != null)
+            DispatcherQueue.TryEnqueue(() =>
             {
-                UpdateTrayIcon(module.State, e.IsPause, module.Progress);
-            }
+                var module = sender as AlarmClockModule;
+                if (module != null)
+                {
+                    UpdateTrayIcon(module.State, e.IsPause, module.Progress);
+                }
+            });
         }
 
         private void UpdateTrayIcon(AlarmClockStates state, bool isPaused, double progress)

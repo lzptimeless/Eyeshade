@@ -212,6 +212,7 @@ namespace Eyeshade.Modules
             if (remainingms > totalms * 0.75) dueTime = Math.Ceiling(remainingms - totalms * 0.75);
             else if (remainingms > totalms * 0.5) dueTime = Math.Ceiling(remainingms - totalms * 0.5);
             else if (remainingms > totalms * 0.25) dueTime = Math.Ceiling(remainingms - totalms * 0.25);
+            else if (remainingms > 10000) dueTime = Math.Ceiling(remainingms - 10000);
             else dueTime = Math.Ceiling(remainingms);
 
             _progressTimer.Change((int)Math.Max(1000, dueTime), Timeout.Infinite);
@@ -220,10 +221,12 @@ namespace Eyeshade.Modules
         private void ProgressCallback(object? state)
         {
             var progress = Progress;
-            ProgressChanged?.Invoke(this, new AlarmClockProgressChangedArgs(progress));
+            var remainingms = RemainingTime.TotalMilliseconds;
 
-            if (progress > 0.25) SetNextProgressTimer();
+            if (progress > 0.25 || remainingms > 10000) SetNextProgressTimer();
             // else SetNextProgressTimer(); // 这个情况会在CountdownCallback调用，所以这里就不重复设置了
+
+            ProgressChanged?.Invoke(this, new AlarmClockProgressChangedArgs(progress));
         }
         #endregion
     }
