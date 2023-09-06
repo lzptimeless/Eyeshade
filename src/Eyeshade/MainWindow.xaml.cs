@@ -19,6 +19,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Media.Core;
+using Windows.Media.Playback;
 using Windows.UI.ViewManagement;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -38,6 +40,7 @@ namespace Eyeshade
         private readonly IntPtr _hWnd;
         private ILogWrapper? _logger;
         private AlarmClockModule? _alarmClockModule;
+        private MediaPlayer _mediaPlayer;
         #endregion
 
         public MainWindow()
@@ -65,6 +68,9 @@ namespace Eyeshade
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
+
+            // 设置音效播放器
+            _mediaPlayer = new MediaPlayer();
         }
 
         public MainWindow(ILogWrapper logger) : this()
@@ -96,6 +102,9 @@ namespace Eyeshade
                 {
                     UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
                 }
+
+                _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\school-chime.mp3"), UriKind.Absolute));
+                _mediaPlayer.Play();
             });
         }
 
