@@ -18,9 +18,11 @@ namespace Eyeshade.TrayIcon
         private readonly IntPtr _hWnd;
         private readonly uint _uid;
         private Win32Icon? _icon;
+        private string? _iconPath;
         private uint _wmMessageId;
         private Windows.Win32.UI.Shell.SUBCLASSPROC? _WndProc;
         private Win32PopupMenu? _popupMenu;
+        private bool _isShow;
         #endregion
 
         public TrayIcon(IntPtr hWnd, int id, uint wmMessageId = PInvoke.WM_USER + 1)
@@ -39,11 +41,14 @@ namespace Eyeshade.TrayIcon
         #region public methods
         public void Show(string icoFilePath, string? tooltip = null)
         {
+            if (_isShow) throw new ApplicationException("TrayIcon has been shown.");
+
             Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS flags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE;
-            Windows.Win32.UI.WindowsAndMessaging.HICON hIcon = new Windows.Win32.UI.WindowsAndMessaging.HICON(IntPtr.Zero);
+            Windows.Win32.UI.WindowsAndMessaging.HICON hIcon = Windows.Win32.UI.WindowsAndMessaging.HICON.Null;
 
             _icon?.Dispose(); // Release old ico
             _icon = null;
+            _iconPath = icoFilePath;
             if (!string.IsNullOrEmpty(icoFilePath))
             {
                 flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
@@ -76,12 +81,38 @@ namespace Eyeshade.TrayIcon
             if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_ADD, _notifyData))
                 throw new Win32Exception();
 
+            _isShow = true;
+
             if (_WndProc == null)
             {
                 _WndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
                 if (!PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0))
                     throw new Win32Exception();
             }
+        }
+
+        public void SetIcon(string icoFilePath)
+        {
+            if (!_isShow) throw new ApplicationException("TrayIcon hasn't shown yet.");
+            if (icoFilePath == _iconPath) return;
+
+            _iconPath = icoFilePath;
+            _icon?.Dispose(); // Release old ico
+            _icon = null;
+            if (!string.IsNullOrEmpty(icoFilePath))
+            {
+                _notifyData.uFlags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
+                _icon = Win32Icon.FromFile(icoFilePath, 32, 32);
+                _notifyData.hIcon = _icon.Handle;
+            }
+            else
+            {
+                _notifyData.uFlags |= ~Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
+                _notifyData.hIcon = Windows.Win32.UI.WindowsAndMessaging.HICON.Null;
+            }
+
+            if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_MODIFY, _notifyData))
+                throw new Win32Exception();
         }
 
         public bool AddMenuItem(int id, string content)

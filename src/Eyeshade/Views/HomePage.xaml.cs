@@ -64,7 +64,7 @@ namespace Eyeshade.Views
             if (module == null) return;
 
             Data.RemainingTime = module.RemainingTime;
-            Data.CountdownProgressValue = Math.Max(0, (int)(100 * module.RemainingTime.TotalMinutes / module.TotalTime.TotalMinutes));
+            Data.CountdownProgressValue = Math.Max(0, (int)(100 * module.Progress));
             Data.IsPaused = module.IsPaused;
             Data.AlarmClockState = module.State;
 

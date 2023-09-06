@@ -23,6 +23,7 @@ namespace Eyeshade.Modules
         /// </summary>
         private TimeSpan _totalTime;
         private AlarmClockStates _state;
+        private readonly Timer _progressTimer;
         #endregion
 
         public AlarmClockModule(ILogWrapper? logger)
@@ -34,6 +35,8 @@ namespace Eyeshade.Modules
             _timerDueTime = _totalTime;
             _timer = new Timer(CountdownCallback, null, _timerDueTime, Timeout.InfiniteTimeSpan);
             _timerStartTime = DateTime.Now;
+            _progressTimer = new Timer(ProgressCallback, null, Timeout.Infinite, Timeout.Infinite);
+            SetNextProgressTimer();
         }
 
         #region properties
@@ -54,12 +57,23 @@ namespace Eyeshade.Modules
                 }
             }
         }
+        public double Progress
+        {
+            get
+            {
+                if (_totalTime.TotalSeconds == 0) return 1;
+
+                return RemainingTime.TotalSeconds / _totalTime.TotalSeconds;
+            }
+        }
         public bool IsPaused => _timerIsPaused;
         public AlarmClockStates State => _state;
         #endregion
 
         #region events
         public event EventHandler<AlarmClockStateChangedArgs>? StateChanged;
+        public event EventHandler<AlarmClockProgressChangedArgs>? ProgressChanged;
+        public event EventHandler<AlarmClockIsPausedChangedArgs>? IsPausedChanged;
         #endregion
 
         #region public methods
@@ -81,6 +95,7 @@ namespace Eyeshade.Modules
             {
                 _timer.Change(remaining, Timeout.InfiniteTimeSpan);
                 _timerStartTime = DateTime.Now;
+                SetNextProgressTimer();
             }
         }
 
@@ -105,6 +120,7 @@ namespace Eyeshade.Modules
             {
                 _timer.Change(remaining, Timeout.InfiniteTimeSpan);
                 _timerStartTime = DateTime.Now;
+                SetNextProgressTimer();
             }
         }
 
@@ -123,6 +139,8 @@ namespace Eyeshade.Modules
             _timerDueTime = remaining;
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
             _timerIsPaused = true;
+            _progressTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(true));
         }
 
         public void Resume()
@@ -135,6 +153,8 @@ namespace Eyeshade.Modules
             _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
             _timerStartTime = DateTime.Now;
             _timerIsPaused = false;
+            SetNextProgressTimer();
+            IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(false));
         }
 
         public void SetWorkTime(TimeSpan value)
@@ -174,10 +194,36 @@ namespace Eyeshade.Modules
             _timerDueTime = _totalTime;
             _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
             _timerStartTime = DateTime.Now;
+            SetNextProgressTimer();
 
             _logger?.Info($"Change state to: {_state}, TotalTime: {_totalTime}");
 
             StateChanged?.Invoke(this, new AlarmClockStateChangedArgs(_state));
+        }
+
+        private void SetNextProgressTimer()
+        {
+            if (_totalTime == TimeSpan.Zero) return;
+
+            var totalms = _totalTime.TotalMilliseconds;
+            var remainingms = RemainingTime.TotalMilliseconds;
+
+            double dueTime;
+            if (remainingms > totalms * 0.75) dueTime = Math.Ceiling(remainingms - totalms * 0.75);
+            else if (remainingms > totalms * 0.5) dueTime = Math.Ceiling(remainingms - totalms * 0.5);
+            else if (remainingms > totalms * 0.25) dueTime = Math.Ceiling(remainingms - totalms * 0.25);
+            else dueTime = Math.Ceiling(remainingms);
+
+            _progressTimer.Change((int)Math.Max(1000, dueTime), Timeout.Infinite);
+        }
+
+        private void ProgressCallback(object? state)
+        {
+            var progress = Progress;
+            ProgressChanged?.Invoke(this, new AlarmClockProgressChangedArgs(progress));
+
+            if (progress > 0.25) SetNextProgressTimer();
+            // else SetNextProgressTimer(); // 这个情况会在CountdownCallback调用，所以这里就不重复设置了
         }
         #endregion
     }
@@ -254,6 +300,26 @@ namespace Eyeshade.Modules
         }
 
         public AlarmClockStates State { get; private set; }
+    }
+
+    public class AlarmClockProgressChangedArgs : EventArgs
+    {
+        public AlarmClockProgressChangedArgs(double progress)
+        {
+            Progress = progress;
+        }
+
+        public double Progress { get; private set; }
+    }
+
+    public class AlarmClockIsPausedChangedArgs : EventArgs
+    {
+        public AlarmClockIsPausedChangedArgs(bool isPause)
+        {
+            IsPause = isPause;
+        }
+
+        public bool IsPause { get; private set; }
     }
 
     public enum AlarmClockStates

@@ -72,6 +72,8 @@ namespace Eyeshade
             _logger = logger;
             _alarmClockModule = new AlarmClockModule(logger);
             _alarmClockModule.StateChanged += _alarmClockModule_StateChanged;
+            _alarmClockModule.IsPausedChanged += _alarmClockModule_IsPausedChanged;
+            _alarmClockModule.ProgressChanged += _alarmClockModule_ProgressChanged;
         }
 
         public AlarmClockModule? AlarmClockModule => _alarmClockModule;
@@ -88,7 +90,41 @@ namespace Eyeshade
                 {
                     CloseRestingWindow();
                 }
+
+                var module = sender as AlarmClockModule;
+                if (module != null)
+                {
+                    UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
+                }
             });
+        }
+
+        private void _alarmClockModule_ProgressChanged(object? sender, AlarmClockProgressChangedArgs e)
+        {
+            var module = sender as AlarmClockModule;
+            if (module != null)
+            {
+                UpdateTrayIcon(module.State, module.IsPaused, e.Progress);
+            }
+        }
+
+        private void _alarmClockModule_IsPausedChanged(object? sender, AlarmClockIsPausedChangedArgs e)
+        {
+            var module = sender as AlarmClockModule;
+            if (module != null)
+            {
+                UpdateTrayIcon(module.State, e.IsPause, module.Progress);
+            }
+        }
+
+        private void UpdateTrayIcon(AlarmClockStates state, bool isPaused, double progress)
+        {
+            if (isPaused) _trayIcon.SetIcon(@"Images\TrayIcon\pause.ico");
+            else if (state == AlarmClockStates.Resting) _trayIcon.SetIcon(@"Images\TrayIcon\resting.ico");
+            else if (progress > 0.75) _trayIcon.SetIcon(@"Images\TrayIcon\100.ico");
+            else if (progress > 0.5) _trayIcon.SetIcon(@"Images\TrayIcon\75.ico");
+            else if (progress > 0.25) _trayIcon.SetIcon(@"Images\TrayIcon\50.ico");
+            else _trayIcon.SetIcon(@"Images\TrayIcon\25.ico");
         }
 
         private void ShowRestingWindow()
@@ -152,7 +188,13 @@ namespace Eyeshade
         private void Root_Loaded(object sender, RoutedEventArgs e)
         {
             // 显示托盘图标
-            _trayIcon.Show(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.ico"), Title);
+            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
+
+            var module = _alarmClockModule;
+            if (module != null)
+            {
+                UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
+            }
         }
 
         /// <summary>
