@@ -53,7 +53,7 @@ namespace Eyeshade
             // 设置自定义窗口标题栏
             this.ExtendsContentIntoTitleBar = true;  // enable custom titlebar
             this.SetTitleBar(AppTitleBar);      // set user ui element as titlebar
-            AppWindow.SetIcon("logo.ico");
+            AppWindow.SetIcon(@"Images\TrayIcon\100.ico");
 
             // 设置托盘图标
             _trayIcon = new TrayIcon.TrayIcon(_hWnd, 0);
@@ -110,6 +110,8 @@ namespace Eyeshade
         {
             Root.RequestedTheme = ElementTheme.Default;
             RestingBackground.Visibility = Visibility.Collapsed;
+            PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
+
             AppWindow.Hide();
         }
 

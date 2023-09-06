@@ -47,7 +47,7 @@ namespace Eyeshade.TrayIcon
             if (!string.IsNullOrEmpty(icoFilePath))
             {
                 flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
-                _icon = Win32Icon.FromFile(icoFilePath, 16, 16);
+                _icon = Win32Icon.FromFile(icoFilePath, 32, 32);
                 hIcon = _icon.Handle;
             }
 
