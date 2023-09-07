@@ -155,8 +155,8 @@ namespace Eyeshade
         {
             Root.RequestedTheme = ElementTheme.Dark;
             RestingBackground.Visibility = Visibility.Visible;
-            PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_MAXIMIZE);
-
+            AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.FullScreen);
+            AppWindow.Show(true);
             // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
             // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
             // When a window that isn't part of the foreground process tries
@@ -170,8 +170,7 @@ namespace Eyeshade
         {
             Root.RequestedTheme = ElementTheme.Default;
             RestingBackground.Visibility = Visibility.Collapsed;
-            PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
-
+            AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.Default);
             AppWindow.Hide();
         }
 
