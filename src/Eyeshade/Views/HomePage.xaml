@@ -10,14 +10,14 @@
     Loaded="Page_Loaded"
     Unloaded="Page_Unloaded">
     <Page.Resources>
-        <XamlUICommand x:Name="DeferCommand" Label="推迟" ExecuteRequested="DeferCommand_ExecuteRequested">
+        <XamlUICommand x:Name="DeferCommand" Label="推迟" ExecuteRequested="DeferCommand_ExecuteRequested" Description="推迟时间">
         </XamlUICommand>
-        <XamlUICommand x:Name="PauseOrResumeCommand" Label="暂停" ExecuteRequested="PauseOrResumeCommand_ExecuteRequested">
+        <XamlUICommand x:Name="PauseOrResumeCommand" Label="暂停" ExecuteRequested="PauseOrResumeCommand_ExecuteRequested" Description="暂停计时">
             <XamlUICommand.IconSource>
                 <SymbolIconSource Symbol="Pause"/>
             </XamlUICommand.IconSource>
         </XamlUICommand>
-        <XamlUICommand x:Name="WorkOrRestCommand" Label="休息" ExecuteRequested="RestCommand_ExecuteRequested">
+        <XamlUICommand x:Name="WorkOrRestCommand" Label="休息" ExecuteRequested="RestCommand_ExecuteRequested" Description="马上休息">
             <XamlUICommand.IconSource>
                 <FontIconSource Glyph="&#xE708;" />
             </XamlUICommand.IconSource>
@@ -55,7 +55,7 @@
                          Minimum="0" Maximum="100"
                          FlowDirection="RightToLeft"/>
             <CommandBar DefaultLabelPosition="Collapsed" HorizontalAlignment="Center">
-                <AppBarButton Icon="Add">
+                <AppBarButton Icon="Add" ToolTipService.ToolTip="推迟时间">
                     <AppBarButton.Flyout>
                         <MenuFlyout Placement="Bottom">
                             <MenuFlyoutItem Text="推迟8分钟" Command="{StaticResource DeferCommand}">

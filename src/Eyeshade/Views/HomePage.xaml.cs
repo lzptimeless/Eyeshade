@@ -103,6 +103,7 @@ namespace Eyeshade.Views
                 if (PauseOrResumeCommand.Label != "恢复")
                 {
                     PauseOrResumeCommand.Label = "恢复";
+                    PauseOrResumeCommand.Description = "恢复计时";
                     PauseOrResumeCommand.IconSource = new SymbolIconSource() { Symbol = Symbol.Play };
                 }
             }
@@ -111,6 +112,7 @@ namespace Eyeshade.Views
                 if (PauseOrResumeCommand.Label != "暂停")
                 {
                     PauseOrResumeCommand.Label = "暂停";
+                    PauseOrResumeCommand.Description = "暂停计时";
                     PauseOrResumeCommand.IconSource = new SymbolIconSource() { Symbol = Symbol.Pause };
                 }
             }
@@ -120,6 +122,7 @@ namespace Eyeshade.Views
                 if (WorkOrRestCommand.Label != "休息")
                 {
                     WorkOrRestCommand.Label = "休息";
+                    WorkOrRestCommand.Description = "马上休息";
                     WorkOrRestCommand.IconSource = new FontIconSource() { Glyph= "\uE708" };
                 }
             }
@@ -128,6 +131,7 @@ namespace Eyeshade.Views
                 if (WorkOrRestCommand.Label != "工作")
                 {
                     WorkOrRestCommand.Label = "工作";
+                    WorkOrRestCommand.Description = "马上工作";
                     WorkOrRestCommand.IconSource = new FontIconSource() { Glyph = "\uE706" };
                 }
             }
