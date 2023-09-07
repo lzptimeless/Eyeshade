@@ -43,26 +43,38 @@ namespace Eyeshade.Views
     public class SettingsData : INotifyPropertyChanged
     {
         public AlarmClockModule? AlarmClockModule { get; set; }
-        public int WorkTime
+        public TimeSpan WorkTime
         {
-            get { return AlarmClockModule != null ? (int)AlarmClockModule.WorkTime.TotalMinutes : 0; }
+            get { return AlarmClockModule != null ? AlarmClockModule.WorkTime : TimeSpan.Zero; }
             set
             {
-                if (AlarmClockModule != null && value != (int)AlarmClockModule.WorkTime.TotalMinutes)
+                if (AlarmClockModule != null && value >= TimeSpan.FromMinutes(1) && value != AlarmClockModule.WorkTime)
                 {
-                    AlarmClockModule.SetWorkTime(TimeSpan.FromMinutes(value));
+                    AlarmClockModule.SetWorkTime(value);
                     OnPropertyChanged();
                 }
             }
         }
-        public int RestingTime
+        public TimeSpan RestingTime
         {
-            get { return AlarmClockModule != null ? (int)AlarmClockModule.RestingTime.TotalMinutes : 0; }
+            get { return AlarmClockModule != null ? AlarmClockModule.RestingTime : TimeSpan.Zero; }
             set
             {
-                if (AlarmClockModule != null && value != (int)AlarmClockModule.RestingTime.TotalMinutes)
+                if (AlarmClockModule != null && value >= TimeSpan.FromMinutes(1) && value != AlarmClockModule.RestingTime)
                 {
-                    AlarmClockModule.SetRestingTime(TimeSpan.FromMinutes(value));
+                    AlarmClockModule.SetRestingTime(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public int RingerVolume
+        {
+            get { return AlarmClockModule != null ? AlarmClockModule.RingerVolume : 0; }
+            set
+            {
+                if (AlarmClockModule != null && value >= 0 && value != AlarmClockModule.RingerVolume)
+                {
+                    AlarmClockModule.SetRingerVolume(value);
                     OnPropertyChanged();
                 }
             }

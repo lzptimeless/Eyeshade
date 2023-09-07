@@ -42,6 +42,7 @@ namespace Eyeshade.Modules
         #region properties
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
+        public int RingerVolume => _userConfig.RingerVolume;
         public TimeSpan TotalTime => _totalTime;
         public TimeSpan RemainingTime
         {
@@ -184,6 +185,14 @@ namespace Eyeshade.Modules
                 SetTotalTime(value);
             }
         }
+
+        public void SetRingerVolume(int value)
+        {
+            if (value < 0) throw new ArgumentOutOfRangeException(nameof(value), value, "Must bigger than or equal to 0");
+
+            _userConfig.RingerVolume = value;
+            _userConfig.Save();
+        }
         #endregion
 
         #region private methods
@@ -244,6 +253,7 @@ namespace Eyeshade.Modules
 
         public TimeSpan WorkTime { get; set; } = TimeSpan.FromMinutes(45);
         public TimeSpan RestingTime { get; set; } = TimeSpan.FromMinutes(4);
+        public int RingerVolume { get; set; } = 100;
 
         public void Load()
         {
@@ -268,6 +278,13 @@ namespace Eyeshade.Modules
                             RestingTime = value;
                         }
                     }
+                    else if (itemNode.Name.LocalName == nameof(RingerVolume))
+                    {
+                        if (int.TryParse(itemNode.Value, out int value))
+                        {
+                            RingerVolume = value;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -283,7 +300,8 @@ namespace Eyeshade.Modules
                 XDocument xdoc = new XDocument();
                 xdoc.Add(new XElement("UserConfig",
                     new XElement(nameof(WorkTime), WorkTime.ToString()),
-                    new XElement(nameof(RestingTime), RestingTime.ToString())
+                    new XElement(nameof(RestingTime), RestingTime.ToString()),
+                    new XElement(nameof(RingerVolume), RingerVolume.ToString())
                 ));
 
                 xdoc.Save(ConfigFilePath);

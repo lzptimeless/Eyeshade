@@ -98,12 +98,15 @@ namespace Eyeshade
                 }
 
                 var module = sender as AlarmClockModule;
+                double volume = 1;
                 if (module != null)
                 {
                     UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
+                    volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
                 }
 
                 _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\school-chime.mp3"), UriKind.Absolute));
+                _mediaPlayer.Volume = volume;
                 _mediaPlayer.Play();
             });
         }

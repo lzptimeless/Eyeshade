@@ -11,20 +11,12 @@
         <StackPanel Margin="8" Padding="12" 
                     CornerRadius="{StaticResource ControlCornerRadius}"
                     Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}">
-            <ComboBox Header="工作时长（分）" PlaceholderText="选择工作时长" Width="150"
-                      SelectedValue="{x:Bind Data.WorkTime, Mode=TwoWay}">
-                <x:Int32>15</x:Int32>
-                <x:Int32>30</x:Int32>
-                <x:Int32>45</x:Int32>
-                <x:Int32>60</x:Int32>
-            </ComboBox>
-            <ComboBox Header="休息时长（分）" PlaceholderText="选择休息时长" Width="150" Margin="0,20,0,0"
-                      SelectedValue="{x:Bind Data.RestingTime, Mode=TwoWay}">
-                <x:Int32>2</x:Int32>
-                <x:Int32>4</x:Int32>
-                <x:Int32>6</x:Int32>
-                <x:Int32>8</x:Int32>
-            </ComboBox>
+            <TimePicker Header="工作时长（时：分）" ClockIdentifier="24HourClock" 
+                        SelectedTime="{x:Bind Data.WorkTime, Mode=TwoWay}"/>
+            <TimePicker Header="休息时长（时：分）" ClockIdentifier="24HourClock" Margin="0,20,0,0" 
+                        SelectedTime="{x:Bind Data.RestingTime, Mode=TwoWay}"/>
+            <Slider Header="铃声音量" Margin="0,20,0,0" Minimum="0" Maximum="100" TickFrequency="10" TickPlacement="Outside"
+                    Value="{x:Bind Data.RingerVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
         </StackPanel>
     </Grid>
 </Page>
