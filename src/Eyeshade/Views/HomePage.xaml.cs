@@ -15,6 +15,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Eyeshade.Modules;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Windows.UI.WindowManagement;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -49,13 +50,42 @@ namespace Eyeshade.Views
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            _countdownTimer.Start();
             ReadData();
+            var appWindow = (App.Current as App)?.MainWindow?.AppWindow;
+            if (appWindow != null)
+            {
+                appWindow.Changed += AppWindow_Changed;
+                if (appWindow.IsVisible)
+                {
+                    _countdownTimer.Start();
+                }
+            }
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
+            var appWindow = (App.Current as App)?.MainWindow?.AppWindow;
+            if (appWindow != null)
+            {
+                appWindow.Changed -= AppWindow_Changed;
+            }
+
             _countdownTimer.Stop();
+        }
+
+        private void AppWindow_Changed(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowChangedEventArgs args)
+        {
+            if (args.DidVisibilityChange)
+            {
+                if (sender.IsVisible)
+                {
+                    _countdownTimer.Start();
+                }
+                else
+                {
+                    _countdownTimer.Stop();
+                }
+            }
         }
 
         private void ReadData()

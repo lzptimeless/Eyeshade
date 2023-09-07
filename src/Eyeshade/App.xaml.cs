@@ -42,6 +42,8 @@ namespace Eyeshade
             this.InitializeComponent();
         }
 
+        public Window? MainWindow => m_window;
+
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
             m_logWrapper.Error(e.Exception, "App crashed.");
