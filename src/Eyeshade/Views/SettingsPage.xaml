@@ -7,16 +7,17 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
-    <Grid>
+    <ScrollViewer>
         <StackPanel Margin="8" Padding="12" 
                     CornerRadius="{StaticResource ControlCornerRadius}"
                     Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}">
-            <TimePicker Header="工作时长（时：分）" ClockIdentifier="24HourClock" 
+            <CheckBox Content="开机自启动" IsChecked="{x:Bind Data.IsStartWithSystem, Mode=TwoWay}"/>
+            <TimePicker Header="工作时长（时：分）" ClockIdentifier="24HourClock" Margin="0,20,0,0"
                         SelectedTime="{x:Bind Data.WorkTime, Mode=TwoWay}"/>
             <TimePicker Header="休息时长（时：分）" ClockIdentifier="24HourClock" Margin="0,20,0,0" 
                         SelectedTime="{x:Bind Data.RestingTime, Mode=TwoWay}"/>
             <Slider Header="铃声音量" Margin="0,20,0,0" Minimum="0" Maximum="100" TickFrequency="10" TickPlacement="Outside"
                     Value="{x:Bind Data.RingerVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Page>

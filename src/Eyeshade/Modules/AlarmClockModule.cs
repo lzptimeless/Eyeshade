@@ -1,8 +1,10 @@
 ﻿using Eyeshade.Log;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -194,6 +196,36 @@ namespace Eyeshade.Modules
             _userConfig.RingerVolume = value;
             _userConfig.Save();
         }
+
+        public bool GetIsStartWithSystem()
+        {
+            var launcher = Assembly.GetEntryAssembly()?.Location;
+            if (!string.IsNullOrEmpty(launcher))
+            {
+                if (launcher.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    launcher = launcher.Substring(0, launcher.Length - 4) + ".exe";
+                }
+                return GetIsStartWithSystem(launcher);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public void SetIsStartWithSystem(bool value)
+        {
+            var launcher = Assembly.GetEntryAssembly()?.Location;
+            if (!string.IsNullOrEmpty(launcher))
+            {
+                if (launcher.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    launcher = launcher.Substring(0, launcher.Length - 4) + ".exe";
+                }
+                SetIsStartWithSystem(value, launcher);
+            }
+        }
         #endregion
 
         #region private methods
@@ -237,6 +269,86 @@ namespace Eyeshade.Modules
             // else SetNextProgressTimer(); // 这个情况会在CountdownCallback调用，所以这里就不重复设置了
 
             ProgressChanged?.Invoke(this, new AlarmClockProgressChangedArgs(progress));
+        }
+
+        private void SetIsStartWithSystem(bool value, string currentLauncherPath)
+        {
+            if (string.IsNullOrEmpty(currentLauncherPath)) throw new ArgumentNullException(nameof(currentLauncherPath));
+
+            try
+            {
+                const string autoStartKey = "Eyeshade";
+                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default))
+                using (var registryKey = baseKey.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run"))
+                {
+                    bool oldValue = false;
+                    string v = (registryKey.GetValue(autoStartKey, null) as string ?? string.Empty).Trim();
+                    string? oldLauncherPath = null;
+                    if (!string.IsNullOrEmpty(v))
+                    {
+                        if (v[0] == '"')
+                        {
+                            int secQuoteIndex = v.IndexOf('"', 1);
+                            if (secQuoteIndex > 1) oldLauncherPath = v.Substring(1, secQuoteIndex - 1);
+                        }
+                        else oldLauncherPath = v.Split(' ')[0];
+
+                        oldValue = string.Equals(oldLauncherPath, currentLauncherPath, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    if (oldValue != value)
+                    {
+                        if (value)
+                        {
+                            registryKey.SetValue(autoStartKey, $"\"{currentLauncherPath}\"");
+                        }
+                        else
+                        {
+                            registryKey.DeleteValue(autoStartKey, false);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Warn(ex, "Set run registry failed.");
+            }
+        }
+
+        private bool GetIsStartWithSystem(string? currentLauncherPath)
+        {
+            if (string.IsNullOrEmpty(currentLauncherPath)) return false;
+
+            const string autoStartKey = "Eyeshade";
+            try
+            {
+                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Default))
+                using (var registryKey = baseKey.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run"))
+                {
+                    if (registryKey == null) return false;
+
+                    string v = (registryKey.GetValue(autoStartKey, null) as string ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(v))
+                        return false;
+                    else
+                    {
+                        string? regLauncherPath = null;
+                        if (v[0] == '"')
+                        {
+                            int secQuoteIndex = v.IndexOf('"', 1);
+                            if (secQuoteIndex > 1) regLauncherPath = v.Substring(1, secQuoteIndex - 1);
+                        }
+                        else regLauncherPath = v.Split(' ')[0];
+
+                        return string.Equals(regLauncherPath, currentLauncherPath, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.Warn(ex, "Get run registry failed.");
+                return false;
+            }
         }
         #endregion
     }

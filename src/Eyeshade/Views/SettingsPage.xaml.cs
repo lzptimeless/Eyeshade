@@ -42,7 +42,40 @@ namespace Eyeshade.Views
 
     public class SettingsData : INotifyPropertyChanged
     {
-        public AlarmClockModule? AlarmClockModule { get; set; }
+        private AlarmClockModule? _alarmClockModule;
+        public AlarmClockModule? AlarmClockModule
+        {
+            get { return _alarmClockModule; }
+            set
+            {
+                if (_alarmClockModule == value) return;
+
+                _alarmClockModule = value;
+                if (_alarmClockModule != null)
+                {
+                    _isStartWithSystem = _alarmClockModule.GetIsStartWithSystem();
+                }
+                else
+                {
+                    _isStartWithSystem = false;
+                }
+            }
+        }
+
+        private bool _isStartWithSystem;
+        public bool IsStartWithSystem
+        {
+            get { return _isStartWithSystem; }
+            set
+            {
+                if (_isStartWithSystem != value)
+                {
+                    _isStartWithSystem = value;
+                    AlarmClockModule?.SetIsStartWithSystem(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
         public TimeSpan WorkTime
         {
             get { return AlarmClockModule != null ? AlarmClockModule.WorkTime : TimeSpan.Zero; }
