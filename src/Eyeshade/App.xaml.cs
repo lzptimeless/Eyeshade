@@ -27,6 +27,12 @@ namespace Eyeshade
     /// </summary>
     public partial class App : Application
     {
+#if IS_NON_PACKAGED
+        public static readonly bool IsPackaged = false;
+#else
+        public static readonly bool IsPackaged = true;
+#endif
+
         private Window? m_window;
         private readonly ILogWrapper m_logWrapper;
 

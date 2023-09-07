@@ -15,6 +15,8 @@ using Microsoft.UI.Xaml.Navigation;
 using Eyeshade.Modules;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using NLog;
+using Windows.ApplicationModel;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -29,6 +31,7 @@ namespace Eyeshade.Views
         public SettingsPage()
         {
             Data = new SettingsData();
+            Data.Prompt += Data_Prompt;
             this.InitializeComponent();
         }
 
@@ -38,6 +41,19 @@ namespace Eyeshade.Views
             set { Data.AlarmClockModule = value; }
         }
         public SettingsData Data { get; set; }
+
+        private async void Data_Prompt(object? sender, string e)
+        {
+            ContentDialog dialog = new ContentDialog();
+            dialog.XamlRoot = XamlRoot;
+            dialog.Style = Application.Current.Resources["DefaultContentDialogStyle"] as Style;
+            dialog.Title = "操作失败！";
+            dialog.PrimaryButtonText = "确认";
+            dialog.DefaultButton = ContentDialogButton.Primary;
+            dialog.Content = e;
+            
+            await dialog.ShowAsync();
+        }
     }
 
     public class SettingsData : INotifyPropertyChanged
@@ -51,13 +67,31 @@ namespace Eyeshade.Views
                 if (_alarmClockModule == value) return;
 
                 _alarmClockModule = value;
+
+                // 初始化_isStartWithSystem
                 if (_alarmClockModule != null)
                 {
-                    _isStartWithSystem = _alarmClockModule.GetIsStartWithSystem();
+                    if (App.IsPackaged)
+                    {
+                        LoadIsStartWithSystemInPackageMode();
+                    }
+                    else
+                    {
+                        var isStartWithSystem = _alarmClockModule.GetIsStartWithSystem();
+                        if (isStartWithSystem != _isStartWithSystem)
+                        {
+                            _isStartWithSystem = isStartWithSystem;
+                            OnPropertyChanged();
+                        }
+                    }
                 }
                 else
                 {
-                    _isStartWithSystem = false;
+                    if (_isStartWithSystem != false)
+                    {
+                        _isStartWithSystem = false;
+                        OnPropertyChanged();
+                    }
                 }
             }
         }
@@ -71,8 +105,15 @@ namespace Eyeshade.Views
                 if (_isStartWithSystem != value)
                 {
                     _isStartWithSystem = value;
-                    AlarmClockModule?.SetIsStartWithSystem(value);
-                    OnPropertyChanged();
+                    if (App.IsPackaged)
+                    {
+                        SetIsStartWithSystemInPackageMode(value);
+                    }
+                    else
+                    {
+                        AlarmClockModule?.SetIsStartWithSystem(value);
+                        OnPropertyChanged();
+                    }
                 }
             }
         }
@@ -113,6 +154,7 @@ namespace Eyeshade.Views
             }
         }
 
+        public event EventHandler<string>? Prompt;
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public void OnPropertyChanged([CallerMemberName] string? propertyName = null)
@@ -120,5 +162,105 @@ namespace Eyeshade.Views
             // Raise the PropertyChanged event, passing the name of the property whose value has changed.
             this.PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        #region private methods
+        private async void LoadIsStartWithSystemInPackageMode()
+        {
+            try
+            {
+                var startupTask = await StartupTask.GetAsync("StartWithSystemTaskId");
+                if (startupTask != null)
+                {
+                    switch (startupTask.State)
+                    {
+                        case StartupTaskState.Disabled:
+                            break;
+                        case StartupTaskState.DisabledByUser:
+                            break;
+                        case StartupTaskState.Enabled:
+                            _isStartWithSystem = true;
+                            break;
+                        case StartupTaskState.DisabledByPolicy:
+                            break;
+                        case StartupTaskState.EnabledByPolicy:
+                            _isStartWithSystem = true;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                OnPropertyChanged(nameof(IsStartWithSystem));
+            }
+            catch { }
+        }
+
+        private async void SetIsStartWithSystemInPackageMode(bool value)
+        {
+            try
+            {
+                var startupTask = await StartupTask.GetAsync("StartWithSystemTaskId");
+                if (startupTask != null)
+                {
+                    switch (startupTask.State)
+                    {
+                        case StartupTaskState.Disabled:
+                            {
+                                if (value)
+                                {
+                                    var newState = await startupTask.RequestEnableAsync();
+                                    _isStartWithSystem = newState == StartupTaskState.Enabled;
+                                    OnPropertyChanged(nameof(IsStartWithSystem));
+                                }
+                            }
+                            break;
+                        case StartupTaskState.DisabledByUser:
+                            {
+                                if (value)
+                                {
+                                    Prompt?.Invoke(this, "你已禁用此应用在登录后立即运行的功能，但如果你改变了主意，可以在任务管理器的“启动”选项卡中启用此功能。");
+                                    _isStartWithSystem = false;
+                                    OnPropertyChanged(nameof(IsStartWithSystem));
+                                }
+                            }
+                            break;
+                        case StartupTaskState.Enabled:
+                            {
+                                if (!value)
+                                {
+                                    startupTask.Disable();
+                                    _isStartWithSystem = false;
+                                    OnPropertyChanged(nameof(IsStartWithSystem));
+                                }
+                            }
+                            break;
+                        case StartupTaskState.DisabledByPolicy:
+                            {
+                                if (value)
+                                {
+                                    Prompt?.Invoke(this, "组策略禁用启动，或者此设备不支持启动。");
+                                    _isStartWithSystem = false;
+                                    OnPropertyChanged(nameof(IsStartWithSystem));
+                                }
+                            }
+                            break;
+                        case StartupTaskState.EnabledByPolicy:
+                            {
+                                if (!value)
+                                {
+                                    Prompt?.Invoke(this, "由组策略开启的此选项不支持关闭。");
+                                    _isStartWithSystem = true;
+                                    OnPropertyChanged(nameof(IsStartWithSystem));
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            catch { }
+        }
+        #endregion
     }
 }

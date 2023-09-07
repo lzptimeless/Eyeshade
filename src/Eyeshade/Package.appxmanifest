@@ -4,6 +4,7 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap">
 
@@ -33,9 +34,20 @@
     <Application Id="App"
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
+	  <Extensions>
+	    <uap5:Extension
+		    Category="windows.startupTask"
+		    Executable="$targetnametoken$.exe"
+		    EntryPoint="Windows.FullTrustApplication">
+		    <uap5:StartupTask
+			    TaskId="StartWithSystemTaskId"
+			    Enabled="true"
+			    DisplayName="Eyeshade" />
+	    </uap5:Extension>
+	  </Extensions>
       <uap:VisualElements
         DisplayName="Eyeshade"
-        Description="Eyeshade"
+        Description="提醒休息眼睛的闹钟"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
