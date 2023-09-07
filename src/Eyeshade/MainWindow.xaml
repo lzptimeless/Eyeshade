@@ -11,7 +11,7 @@
     <Window.SystemBackdrop>
         <DesktopAcrylicBackdrop/>
     </Window.SystemBackdrop>
-    <Grid x:Name="Root" Loaded="Root_Loaded">
+    <Grid x:Name="Root" Loaded="Root_Loaded" PointerEntered="Root_PointerEntered" PointerExited="Root_PointerExited">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition/>

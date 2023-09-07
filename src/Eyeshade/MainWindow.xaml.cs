@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Media.Core;
@@ -41,6 +42,8 @@ namespace Eyeshade
         private ILogWrapper? _logger;
         private AlarmClockModule? _alarmClockModule;
         private MediaPlayer _mediaPlayer;
+        private readonly Timer _trayPopupCloseTimer;
+        private readonly Timer _trayPopupShowTimer;
         #endregion
 
         public MainWindow()
@@ -63,8 +66,14 @@ namespace Eyeshade
             _trayIcon.AddMenuItem(0, "关闭菜单"); // 这个选项触发时什么也不做
             _trayIcon.AddMenuItem(1, "打开主窗口");
             _trayIcon.AddMenuItem(2, "退出");
-            _trayIcon.Clicked += _trayIcon_Clicked;
+            _trayIcon.Select += _trayIcon_Select;
+            _trayIcon.PopupOpen += _trayIcon_PopupOpen;
+            _trayIcon.PopupClose += _trayIcon_PopupClose;
             _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
+
+            // 设置托盘窗口开启关闭计时器
+            _trayPopupShowTimer = new Timer(TrayPopupShowTimerCallback);
+            _trayPopupCloseTimer = new Timer(TrayPopupCloseTimerCallback);
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
@@ -83,6 +92,11 @@ namespace Eyeshade
         }
 
         public AlarmClockModule? AlarmClockModule => _alarmClockModule;
+
+        public void ShowHide()
+        {
+            PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_HIDE);
+        }
 
         private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
         {
@@ -175,7 +189,7 @@ namespace Eyeshade
         }
 
         #region TrayIcon
-        private void _trayIcon_Clicked(object? sender, EventArgs e)
+        private void _trayIcon_Select(object? sender, EventArgs e)
         {
             if (AppWindow.IsVisible)
             {
@@ -185,6 +199,44 @@ namespace Eyeshade
             {
                 ShowNearToTrayIcon();
             }
+        }
+
+        private void _trayIcon_PopupOpen(object? sender, EventArgs e)
+        {
+            _trayPopupCloseTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.5), Timeout.InfiniteTimeSpan);
+        }
+
+        private void _trayIcon_PopupClose(object? sender, EventArgs e)
+        {
+            _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _trayPopupCloseTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        }
+
+        private void Root_PointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            _trayPopupCloseTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+
+        private void Root_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            _trayPopupCloseTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+        }
+
+        private void TrayPopupShowTimerCallback(object? state)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                ShowNearToTrayIcon();
+            });
+        }
+
+        private void TrayPopupCloseTimerCallback(object? state)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                AppWindow?.Hide();
+            });
         }
 
         private void _trayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)
@@ -230,13 +282,19 @@ namespace Eyeshade
                 PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
             }
 
+            if (AppWindow.Presenter.Kind != Microsoft.UI.Windowing.AppWindowPresenterKind.Default)
+            {
+                // 从全屏状态恢复到默认状态
+                AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.Default);
+            }
+
             var size = AppWindow.Size;
             var position = _trayIcon.CalculatePopupWindowPosition(size.Width, size.Height);
             AppWindow.Move(new Windows.Graphics.PointInt32(position.X, position.Y));
 
             if (!AppWindow.IsVisible)
             {
-                AppWindow.Show(true);
+                AppWindow.Show();
             }
 
             // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
@@ -244,8 +302,8 @@ namespace Eyeshade
             // When a window that isn't part of the foreground process tries
             // to use SetWindowPos with HWND_TOP, Windows will not allow the
             // window to appear on top of the foreground window
-            // AppWindow.MoveInZOrderAtTop();
             PInvoke.SetForegroundWindow(new HWND(_hWnd));
+            AppWindow.MoveInZOrderAtTop();
         }
         #endregion
 

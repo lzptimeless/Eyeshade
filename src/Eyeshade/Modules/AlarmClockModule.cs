@@ -300,7 +300,7 @@ namespace Eyeshade.Modules
                     {
                         if (value)
                         {
-                            registryKey.SetValue(autoStartKey, $"\"{currentLauncherPath}\"");
+                            registryKey.SetValue(autoStartKey, $"\"{currentLauncherPath}\" --start-with-system");
                         }
                         else
                         {

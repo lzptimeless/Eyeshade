@@ -33,7 +33,7 @@ namespace Eyeshade
         public static readonly bool IsPackaged = true;
 #endif
 
-        private Window? m_window;
+        private MainWindow? m_window;
         private readonly ILogWrapper m_logWrapper;
 
         /// <summary>
@@ -62,7 +62,18 @@ namespace Eyeshade
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             m_window = new MainWindow(m_logWrapper);
-            m_window.Activate();
+            var cmd = Environment.GetCommandLineArgs();
+
+            if (args.Arguments?.Contains("--start-with-system") == true || // Unpackaged mode
+                cmd?.Contains("--start-with-system") == true || // Unpackaged mode
+                args.UWPLaunchActivatedEventArgs.Kind == ActivationKind.StartupTask) // Packaged mode
+            {
+                m_window.ShowHide();
+            }
+            else
+            {
+                m_window.Activate();
+            }
         }
     }
 }

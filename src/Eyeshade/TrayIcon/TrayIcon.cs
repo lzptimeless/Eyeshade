@@ -19,6 +19,7 @@ namespace Eyeshade.TrayIcon
         private readonly uint _uid;
         private Win32Icon? _icon;
         private string? _iconPath;
+        private string? _tooltip;
         private uint _wmMessageId;
         private Windows.Win32.UI.Shell.SUBCLASSPROC? _WndProc;
         private Win32PopupMenu? _popupMenu;
@@ -33,8 +34,9 @@ namespace Eyeshade.TrayIcon
         }
 
         #region events
-        public event EventHandler? Clicked;
-        public event EventHandler? DoubleClicked;
+        public event EventHandler? PopupOpen;
+        public event EventHandler? PopupClose;
+        public event EventHandler? Select;
         public event EventHandler<TrayIconMenuItemExecuteArgs>? MenuItemExecute;
         #endregion
 
@@ -56,6 +58,7 @@ namespace Eyeshade.TrayIcon
                 hIcon = _icon.Handle;
             }
 
+            _tooltip = tooltip;
             __char_128 tip = new __char_128();
             if (!string.IsNullOrEmpty(tooltip))
             {
@@ -72,13 +75,16 @@ namespace Eyeshade.TrayIcon
                 cbSize = (uint)Marshal.SizeOf<Windows.Win32.UI.Shell.NOTIFYICONDATAW>(),
                 hWnd = new Windows.Win32.Foundation.HWND(_hWnd),
                 uID = _uid,
-                Anonymous = new Windows.Win32.UI.Shell.NOTIFYICONDATAW._Anonymous_e__Union() { uVersion = 0x00 },
+                Anonymous = new Windows.Win32.UI.Shell.NOTIFYICONDATAW._Anonymous_e__Union() { uVersion = PInvoke.NOTIFYICON_VERSION_4 },
                 uCallbackMessage = _wmMessageId,
                 hIcon = hIcon,
                 szTip = tip,
                 uFlags = flags
             };
             if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_ADD, _notifyData))
+                throw new Win32Exception();
+
+            if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_SETVERSION, _notifyData))
                 throw new Win32Exception();
 
             _isShow = true;
@@ -101,16 +107,33 @@ namespace Eyeshade.TrayIcon
             _icon = null;
             if (!string.IsNullOrEmpty(icoFilePath))
             {
-                _notifyData.uFlags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
+                _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
                 _icon = Win32Icon.FromFile(icoFilePath, 32, 32);
                 _notifyData.hIcon = _icon.Handle;
+
+                if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_MODIFY, _notifyData))
+                    throw new Win32Exception();
             }
-            else
+        }
+
+        public void SetTooltip(string? tooltip)
+        {
+            if (!_isShow) throw new ApplicationException("TrayIcon hasn't shown yet.");
+            if (tooltip == _tooltip) return;
+
+            _tooltip = tooltip;
+            __char_128 tip = new __char_128();
+            if (!string.IsNullOrEmpty(tooltip))
             {
-                _notifyData.uFlags |= ~Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
-                _notifyData.hIcon = Windows.Win32.UI.WindowsAndMessaging.HICON.Null;
+                for (int i = 0; i < tooltip.Length && i < tip.Length - 1; i++)
+                {
+                    tip[i] = tooltip[i];
+                }
+                tip[tip.Length - 1] = '\0';
             }
 
+            _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_TIP;
+            _notifyData.szTip = tip;
             if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_MODIFY, _notifyData))
                 throw new Win32Exception();
         }
@@ -136,7 +159,7 @@ namespace Eyeshade.TrayIcon
             PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_DELETE, notifyData);
         }
 
-        public RECT CalculatePopupWindowPosition(int windowWidth, int windowHeight)
+        public unsafe RECT CalculatePopupWindowPosition(int windowWidth, int windowHeight)
         {
             Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER id = new Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER()
             {
@@ -147,7 +170,13 @@ namespace Eyeshade.TrayIcon
             };
             var hResult = PInvoke.Shell_NotifyIconGetRect(id, out var iconLocation);
             if (!hResult.Succeeded)
-                throw new Win32Exception(hResult);
+            {
+                RECT screenRect;
+                if (!PInvoke.SystemParametersInfo(Windows.Win32.UI.WindowsAndMessaging.SYSTEM_PARAMETERS_INFO_ACTION.SPI_GETWORKAREA, 0, &screenRect, 0))
+                    throw new Win32Exception();
+
+                iconLocation = RECT.FromXYWH(screenRect.Width, screenRect.Height, 2, 2);
+            }
 
             Point anchorPoint = new Point(iconLocation.X + iconLocation.Width / 2, iconLocation.Y + iconLocation.Height / 2);
             const uint TPM_CENTERALIGN = 0x0004;
@@ -186,21 +215,26 @@ namespace Eyeshade.TrayIcon
         {
             if (uMsg == _wmMessageId)
             {
-                switch ((uint)lParam.Value)
+                switch ((uint)lParam.Value & 0xFFFF) // LOWORD
                 {
-                    case PInvoke.WM_LBUTTONDBLCLK:
-                        {
-                            DoubleClicked?.Invoke(this, EventArgs.Empty);
-                        }
-                        break;
-                    case PInvoke.WM_LBUTTONUP:
-                        {
-                            Clicked?.Invoke(this, EventArgs.Empty);
-                        }
-                        break;
-                    case PInvoke.WM_RBUTTONUP:
+                    case PInvoke.WM_CONTEXTMENU:
                         {
                             _popupMenu?.Show(_hWnd);
+                        }
+                        break;
+                    case PInvoke.NIN_SELECT:
+                        {
+                            Select?.Invoke(this, EventArgs.Empty);
+                        }
+                        break;
+                    case PInvoke.NIN_POPUPOPEN:
+                        {
+                            PopupOpen?.Invoke(this, EventArgs.Empty);
+                        }
+                        break;
+                    case PInvoke.NIN_POPUPCLOSE:
+                        {
+                            PopupClose?.Invoke(this, EventArgs.Empty);
                         }
                         break;
                     default: break;

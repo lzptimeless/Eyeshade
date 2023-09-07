@@ -12,11 +12,11 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <ApplicationIcon>logo.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
-	<!--<WindowsPackageType>None</WindowsPackageType>-->
-	<Authors>lzp</Authors>
-	<Description>提醒休息眼睛的闹钟</Description>
-	<Copyright>Copyright © 2019 LZP</Copyright>
-	<DefaultLanguage>zh-cn</DefaultLanguage>
+	  <WindowsPackageType>None</WindowsPackageType>
+	  <Authors>lzp</Authors>
+	  <Description>提醒休息眼睛的闹钟</Description>
+	  <Copyright>Copyright © 2019 LZP</Copyright>
+	  <DefaultLanguage>zh-cn</DefaultLanguage>
   </PropertyGroup>
 
   <!--Define "IS_NON_PACKAGED" constant if the app is non-packaged app.-->
