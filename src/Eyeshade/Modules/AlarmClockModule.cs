@@ -1,6 +1,7 @@
 ﻿using Eyeshade.Log;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -242,12 +243,15 @@ namespace Eyeshade.Modules
 
     public class AlarmClockConfig
     {
-        private const string ConfigFilePath = "user-config.xml";
+        private readonly string ConfigFileName = "user-config.xml";
         private readonly ILogWrapper? _logger;
+        private readonly string _configFilePath;
 
         public AlarmClockConfig(ILogWrapper? logger)
         {
             _logger = logger;
+            _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+
             Load();
         }
 
@@ -259,7 +263,7 @@ namespace Eyeshade.Modules
         {
             try
             {
-                XDocument xdoc = XDocument.Load(ConfigFilePath);
+                XDocument xdoc = XDocument.Load(_configFilePath);
                 if (xdoc.Root == null) return;
 
                 foreach (var itemNode in xdoc.Root.Elements())
@@ -289,7 +293,7 @@ namespace Eyeshade.Modules
             }
             catch (Exception ex)
             {
-                _logger?.Warn(ex, $"Load {ConfigFilePath} failed.");
+                _logger?.Warn(ex, $"Load {ConfigFileName} failed.");
             }
         }
 
@@ -304,11 +308,11 @@ namespace Eyeshade.Modules
                     new XElement(nameof(RingerVolume), RingerVolume.ToString())
                 ));
 
-                xdoc.Save(ConfigFilePath);
+                xdoc.Save(_configFilePath);
             }
             catch (Exception ex)
             {
-                _logger?.Warn(ex, $"Save {ConfigFilePath} failed.");
+                _logger?.Warn(ex, $"Save {ConfigFileName} failed.");
             }
         }
     }
