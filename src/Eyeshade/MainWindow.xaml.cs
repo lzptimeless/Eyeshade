@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -96,20 +97,22 @@ namespace Eyeshade
         public void ShowHide()
         {
             // 显示托盘图标
-            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
+            _trayIcon.Show(GetCurrentStateTrayIcon(), Title);
             PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_HIDE);
         }
 
         public void ShowNormal()
         {
             // 显示托盘图标
-            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
+            _trayIcon.Show(GetCurrentStateTrayIcon(), Title);
             Thread.Sleep(200); // 等待托盘图标显示完成ShowNearToTrayIcon才能获取到正确的显示位置
             ShowNearToTrayIcon();
         }
         #region AlarmClick
         private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
         {
+            _trayIcon.SetIcon(GetCurrentStateTrayIcon());
+
             DispatcherQueue.TryEnqueue(() =>
             {
                 if (e.State == AlarmClockStates.Resting)
@@ -121,11 +124,10 @@ namespace Eyeshade
                     CloseRestingWindow();
                 }
 
-                var module = sender as AlarmClockModule;
                 double volume = 1;
+                var module = sender as AlarmClockModule;
                 if (module != null)
                 {
-                    UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
                     volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
                 }
 
@@ -137,15 +139,14 @@ namespace Eyeshade
 
         private void _alarmClockModule_ProgressChanged(object? sender, AlarmClockProgressChangedArgs e)
         {
+            _trayIcon.SetIcon(GetCurrentStateTrayIcon());
+
             DispatcherQueue.TryEnqueue(() =>
             {
                 var module = sender as AlarmClockModule;
                 if (module != null)
                 {
-                    var state = module.State;
-                    UpdateTrayIcon(state, module.IsPaused, e.Progress);
-
-                    if (state == AlarmClockStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
+                    if (module.State == AlarmClockStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
                     {
                         ShowNearToTrayIcon();
                     }
@@ -155,24 +156,26 @@ namespace Eyeshade
 
         private void _alarmClockModule_IsPausedChanged(object? sender, AlarmClockIsPausedChangedArgs e)
         {
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                var module = sender as AlarmClockModule;
-                if (module != null)
-                {
-                    UpdateTrayIcon(module.State, e.IsPause, module.Progress);
-                }
-            });
+            _trayIcon.SetIcon(GetCurrentStateTrayIcon());
         }
 
-        private void UpdateTrayIcon(AlarmClockStates state, bool isPaused, double progress)
+        private string GetCurrentStateTrayIcon()
         {
-            if (isPaused) _trayIcon.SetIcon(@"Images\TrayIcon\pause.ico");
-            else if (state == AlarmClockStates.Resting) _trayIcon.SetIcon(@"Images\TrayIcon\resting.ico");
-            else if (progress > 0.75) _trayIcon.SetIcon(@"Images\TrayIcon\100.ico");
-            else if (progress > 0.5) _trayIcon.SetIcon(@"Images\TrayIcon\75.ico");
-            else if (progress > 0.25) _trayIcon.SetIcon(@"Images\TrayIcon\50.ico");
-            else _trayIcon.SetIcon(@"Images\TrayIcon\25.ico");
+            string trayIcon = @"Images\TrayIcon\100.ico";
+            var module = _alarmClockModule;
+            if (module != null)
+            {
+                var progress = module.Progress;
+
+                if (module.IsPaused) trayIcon = @"Images\TrayIcon\pause.ico";
+                else if (module.State == AlarmClockStates.Resting) trayIcon = @"Images\TrayIcon\resting.ico";
+                else if (progress > 0.75) trayIcon = @"Images\TrayIcon\100.ico";
+                else if (progress > 0.5) trayIcon = @"Images\TrayIcon\75.ico";
+                else if (progress > 0.25) trayIcon = @"Images\TrayIcon\50.ico";
+                else trayIcon = @"Images\TrayIcon\25.ico";
+            }
+
+            return trayIcon;
         }
 
         private void ShowRestingWindow()
@@ -283,15 +286,6 @@ namespace Eyeshade
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Hide();
             args.Cancel = true;
-        }
-
-        private void Root_Loaded(object sender, RoutedEventArgs e)
-        {
-            var module = _alarmClockModule;
-            if (module != null)
-            {
-                UpdateTrayIcon(module.State, module.IsPaused, module.Progress);
-            }
         }
 
         /// <summary>

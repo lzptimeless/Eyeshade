@@ -41,11 +41,17 @@ namespace Eyeshade.TrayIcon
         #endregion
 
         #region public methods
-        public void Show(string icoFilePath, string? tooltip = null)
+        public void Show(string icoFilePath, string? tooltip = null, bool useCustomPopup = true)
         {
             if (_isShow) throw new ApplicationException("TrayIcon has been shown.");
 
             Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS flags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE;
+            if (!useCustomPopup)
+            {
+                // This option will disable NIN_POPUPOPEN and NIN_POPUPCLOSE message
+                flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_SHOWTIP;
+            }
+
             Windows.Win32.UI.WindowsAndMessaging.HICON hIcon = Windows.Win32.UI.WindowsAndMessaging.HICON.Null;
 
             _icon?.Dispose(); // Release old ico
@@ -150,6 +156,8 @@ namespace Eyeshade.TrayIcon
 
         public void Close()
         {
+            if (!_isShow) return;
+
             var notifyData = new Windows.Win32.UI.Shell.NOTIFYICONDATAW()
             {
                 cbSize = (uint)Marshal.SizeOf<Windows.Win32.UI.Shell.NOTIFYICONDATAW>(),
@@ -157,6 +165,8 @@ namespace Eyeshade.TrayIcon
                 uID = _uid
             };
             PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_DELETE, notifyData);
+
+            _isShow = false;
         }
 
         public unsafe RECT CalculatePopupWindowPosition(int windowWidth, int windowHeight)
