@@ -6,7 +6,8 @@
     xmlns:local="using:Eyeshade.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    Unloaded="Page_Unloaded">
     <Grid>
         <ScrollViewer>
             <StackPanel Margin="8" Padding="12" 
@@ -17,8 +18,20 @@
                             SelectedTime="{x:Bind Data.WorkTime, Mode=TwoWay}"/>
                 <TimePicker Header="休息时长（时：分）" ClockIdentifier="24HourClock" Margin="0,20,0,0" 
                             SelectedTime="{x:Bind Data.RestingTime, Mode=TwoWay}"/>
-                <Slider Header="铃声音量" Margin="0,20,0,0" Minimum="0" Maximum="100" TickFrequency="10" TickPlacement="Outside"
-                        Value="{x:Bind Data.RingerVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                <Grid Margin="0,20,0,0" MinWidth="242" HorizontalAlignment="Left">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="VolumeSlider" Grid.Column="0" Header="铃声音量" Minimum="0" Maximum="100" TickFrequency="10" TickPlacement="Outside"
+                            Value="{Binding RingerVolume, Mode=TwoWay, UpdateSourceTrigger=Explicit}"
+                            PointerCaptureLost="VolumeSlider_PointerCaptureLost"
+                            LostFocus="VolumeSlider_LostFocus"/>
+                    <Button x:Name="VolumeTestButton" Grid.Column="1" VerticalAlignment="Bottom" Margin="8,0,0,0" ToolTipService.ToolTip="测试音量"
+                            Click="VolumeTestButton_Click">
+                        <FontIcon Glyph="&#xE767;" />
+                    </Button>
+                </Grid>
                 <ComboBox Header="托盘弹窗显示方式" Margin="0,20,0,0" MinWidth="170"
                           ItemsSource="{x:Bind Data.TrayPopupShowModes, Mode=OneTime}"
                           SelectedValuePath="Item1"

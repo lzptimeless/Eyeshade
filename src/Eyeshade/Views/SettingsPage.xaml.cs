@@ -17,6 +17,8 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using NLog;
 using Windows.ApplicationModel;
+using Windows.Media.Playback;
+using Windows.Media.Core;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -28,10 +30,13 @@ namespace Eyeshade.Views
     /// </summary>
     public sealed partial class SettingsPage : Page
     {
+        private MediaPlayer? _mediaPlayer;
+
         public SettingsPage()
         {
             Data = new SettingsData();
             Data.Prompt += Data_Prompt;
+            DataContext = Data; // 为了Volume Explicit Binding
             this.InitializeComponent();
         }
 
@@ -53,6 +58,54 @@ namespace Eyeshade.Views
             dialog.Content = e;
 
             await dialog.ShowAsync();
+        }
+
+        private void VolumeTestButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_mediaPlayer == null)
+            {
+                _mediaPlayer = new MediaPlayer();
+                _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\school-chime.mp3"), UriKind.Absolute));
+            }
+
+            _mediaPlayer.Volume = Math.Min(1, Math.Max(0, Data.RingerVolume / 100d));
+            if (_mediaPlayer.CurrentState != MediaPlayerState.Playing)
+            {
+                _mediaPlayer.Play();
+            }
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _mediaPlayer?.Dispose();
+        }
+
+        private void VolumeSlider_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            var binding = VolumeSlider.GetBindingExpression(Slider.ValueProperty);
+            if (binding != null)
+            {
+                binding.UpdateSource();
+            }
+
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.Volume = Math.Min(1, Math.Max(0, Data.RingerVolume / 100d));
+            }
+        }
+
+        private void VolumeSlider_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var binding = VolumeSlider.GetBindingExpression(Slider.ValueProperty);
+            if (binding != null)
+            {
+                binding.UpdateSource();
+            }
+
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.Volume = Math.Min(1, Math.Max(0, Data.RingerVolume / 100d));
+            }
         }
     }
 
