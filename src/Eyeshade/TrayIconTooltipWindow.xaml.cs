@@ -68,19 +68,39 @@ namespace Eyeshade
             }
         }
 
-        public void Show(int x, int y, int width, int height)
+        public unsafe void Show(int x, int y, int width, int height)
         {
             if (AppWindow != null)
             {
                 AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
-                AppWindow.Show();
+                if (!AppWindow.IsVisible)
+                {
+                    AppWindow.Show();
+                }
                 // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
                 // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
                 // When a window that isn't part of the foreground process tries
                 // to use SetWindowPos with HWND_TOP, Windows will not allow the
                 // window to appear on top of the foreground window
-                PInvoke.SetForegroundWindow(new Windows.Win32.Foundation.HWND(_hWnd));
-                // AppWindow.MoveInZOrderAtTop();
+
+                // 因为2000/XP改变了SetForegroundWindow的执行方式，不允许随便把窗口提前，
+                // 打扰用户的工作。可以用附加本线程到最前面窗口的线程，从而欺骗windows。
+                var hWndForeground = PInvoke.GetForegroundWindow();
+                var foregourndThreadId = PInvoke.GetWindowThreadProcessId(hWndForeground, null);
+                var currentThreadId = PInvoke.GetCurrentThreadId();
+                if (foregourndThreadId != currentThreadId)
+                {
+                    if (foregourndThreadId != 0 && currentThreadId != 0)
+                    {
+                        PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new Windows.Win32.Foundation.BOOL(true));
+                    }
+                    PInvoke.SetForegroundWindow(new Windows.Win32.Foundation.HWND(_hWnd));
+                    AppWindow.MoveInZOrderAtTop();
+                    if (foregourndThreadId != 0 && currentThreadId != 0)
+                    {
+                        PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new Windows.Win32.Foundation.BOOL(false));
+                    }
+                }
             }
         }
 

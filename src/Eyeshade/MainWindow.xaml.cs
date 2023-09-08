@@ -280,9 +280,12 @@ namespace Eyeshade
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
-                if (_alarmClockModule != null && _alarmClockModule.TrayPopupShowMode != AlarmClockTrayPopupShowModes.TrayIconHover)
+                if (_alarmClockModule != null)
                 {
-                    _trayTooltipWindow?.Hide();
+                    if (_alarmClockModule.TrayPopupShowMode != AlarmClockTrayPopupShowModes.TrayIconHover)
+                    {
+                        _trayTooltipWindow?.Hide();
+                    }
                 }
             });
         }
@@ -316,7 +319,7 @@ namespace Eyeshade
         /// <summary>
         /// 在托盘附近显示窗口
         /// </summary>
-        private void ShowNearToTrayIcon()
+        private unsafe void ShowNearToTrayIcon()
         {
             if (AppWindow == null) return;
 
@@ -345,8 +348,26 @@ namespace Eyeshade
             // When a window that isn't part of the foreground process tries
             // to use SetWindowPos with HWND_TOP, Windows will not allow the
             // window to appear on top of the foreground window
-            PInvoke.SetForegroundWindow(new HWND(_hWnd));
-            // AppWindow.MoveInZOrderAtTop();
+
+            // 因为2000/XP改变了SetForegroundWindow的执行方式，不允许随便把窗口提前，
+            // 打扰用户的工作。可以用附加本线程到最前面窗口的线程，从而欺骗windows。
+            var hWndForeground = PInvoke.GetForegroundWindow();
+            var foregourndThreadId = PInvoke.GetWindowThreadProcessId(hWndForeground, null);
+            var currentThreadId = PInvoke.GetCurrentThreadId();
+            if (foregourndThreadId != currentThreadId)
+            {
+                if (foregourndThreadId != 0 && currentThreadId != 0)
+                {
+                    PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new BOOL(true));
+                }
+                PInvoke.SetForegroundWindow(new HWND(_hWnd));
+                PInvoke.SetFocus(new HWND(_hWnd));
+                AppWindow.MoveInZOrderAtTop();
+                if (foregourndThreadId != 0 && currentThreadId != 0)
+                {
+                    PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new BOOL(false));
+                }
+            }
         }
         #endregion
 
