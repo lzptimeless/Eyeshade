@@ -9,15 +9,15 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="4c9a9000-cd5e-4407-acb2-6d185845a535"
-    Publisher="CN=lzpti"
-    Version="1.0.0.0" />
+    Name="64432LZP.Eyeshade"
+    Publisher="CN=45F3959F-7D3A-4AEA-BBAA-DC2BE00599E5"
+    Version="1.0.1.0" />
 
-  <mp:PhoneIdentity PhoneProductId="4c9a9000-cd5e-4407-acb2-6d185845a535" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="5f5f2b72-70d9-4bd4-8b2f-8e75cbce7a0a" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>Eyeshade</DisplayName>
-    <PublisherDisplayName>lzpti</PublisherDisplayName>
+    <PublisherDisplayName>LZP</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
