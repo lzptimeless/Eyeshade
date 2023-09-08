@@ -45,6 +45,9 @@ namespace Eyeshade
         private AlarmClockModule? _alarmClockModule;
         private MediaPlayer _mediaPlayer;
         private readonly Timer _trayPopupShowTimer;
+        private readonly Timer _trayPopupHideTimer;
+        private TrayIconTooltipWindow? _trayTooltipWindow;
+        private readonly double _dipRateVirtualToPhysical;
         #endregion
 
         public MainWindow()
@@ -54,8 +57,8 @@ namespace Eyeshade
             // 设置窗口大小
             _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var dpi = PInvoke.GetDpiForWindow(new HWND(_hWnd));
-            var dpiRate = dpi / 96d;
-            AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dpiRate), (int)(400 * dpiRate)));
+            _dipRateVirtualToPhysical = dpi / 96d;
+            AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * _dipRateVirtualToPhysical), (int)(400 * _dipRateVirtualToPhysical)));
 
             // 设置自定义窗口标题栏
             this.ExtendsContentIntoTitleBar = true;  // enable custom titlebar
@@ -75,6 +78,7 @@ namespace Eyeshade
 
             // 设置托盘窗口开启关闭计时器
             _trayPopupShowTimer = new Timer(TrayPopupShowTimerCallback);
+            _trayPopupHideTimer = new Timer(TrayPopupHideTimerCallback);
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
@@ -113,7 +117,7 @@ namespace Eyeshade
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
                 if (e.State == AlarmClockStates.Resting)
                 {
@@ -141,7 +145,7 @@ namespace Eyeshade
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
                 var module = sender as AlarmClockModule;
                 if (module != null)
@@ -223,18 +227,14 @@ namespace Eyeshade
 
         private void _trayIcon_PopupOpen(object? sender, EventArgs e)
         {
-            if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
-            {
-                _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.3), Timeout.InfiniteTimeSpan);
-            }
+            _trayPopupHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.3), Timeout.InfiniteTimeSpan);
         }
 
         private void _trayIcon_PopupClose(object? sender, EventArgs e)
         {
-            if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
-            {
-                _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            }
+            _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _trayPopupHideTimer.Change(TimeSpan.FromSeconds(0.5), Timeout.InfiniteTimeSpan);
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -250,17 +250,40 @@ namespace Eyeshade
 
         private void TrayPopupShowTimerCallback(object? state)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
-                ShowNearToTrayIcon();
+                var module = _alarmClockModule;
+                if (module != null)
+                {
+                    if (module.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
+                    {
+                        ShowNearToTrayIcon();
+                    }
+                    else
+                    {
+                        if (_trayTooltipWindow == null)
+                        {
+                            _trayTooltipWindow = new TrayIconTooltipWindow();
+                        }
+
+                        _trayTooltipWindow.Data.Tooltip = $"Eyeshade 剩余时间 {module.RemainingTime.ToString(@"hh\:mm\:ss")}";
+                        var size = _trayTooltipWindow.CalculateDesiredSize();
+                        var dpiRate = _dipRateVirtualToPhysical;
+                        var position = _trayIcon.CalculatePopupWindowPosition((int)(size.Width * dpiRate), (int)(size.Height * dpiRate));
+                        _trayTooltipWindow.Show(position.X, position.Y, position.Width, position.Height);
+                    }
+                }
             });
         }
 
-        private void TrayPopupCloseTimerCallback(object? state)
+        private void TrayPopupHideTimerCallback(object? state)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
-                AppWindow?.Hide();
+                if (_alarmClockModule != null && _alarmClockModule.TrayPopupShowMode != AlarmClockTrayPopupShowModes.TrayIconHover)
+                {
+                    _trayTooltipWindow?.Hide();
+                }
             });
         }
 
@@ -277,6 +300,8 @@ namespace Eyeshade
             else if (e.Id == 2)
             {
                 // 退出
+                _trayTooltipWindow?.Close();
+                _trayTooltipWindow = null;
                 Close();
             }
         }
