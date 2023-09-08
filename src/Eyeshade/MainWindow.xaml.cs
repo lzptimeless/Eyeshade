@@ -346,7 +346,7 @@ namespace Eyeshade
             // to use SetWindowPos with HWND_TOP, Windows will not allow the
             // window to appear on top of the foreground window
             PInvoke.SetForegroundWindow(new HWND(_hWnd));
-            AppWindow.MoveInZOrderAtTop();
+            // AppWindow.MoveInZOrderAtTop();
         }
         #endregion
 
