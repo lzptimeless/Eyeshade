@@ -19,6 +19,16 @@
                             SelectedTime="{x:Bind Data.RestingTime, Mode=TwoWay}"/>
                 <Slider Header="铃声音量" Margin="0,20,0,0" Minimum="0" Maximum="100" TickFrequency="10" TickPlacement="Outside"
                         Value="{x:Bind Data.RingerVolume, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
+                <ComboBox Header="托盘弹窗显示方式" Margin="0,20,0,0" MinWidth="170"
+                          ItemsSource="{x:Bind Data.TrayPopupShowModes, Mode=OneTime}"
+                          SelectedValuePath="Item1"
+                          DisplayMemberPath="Item2"
+                          SelectedItem="{x:Bind Data.TrayPopupShowMode, Mode=TwoWay}"/>
+                <ComboBox Header="托盘弹窗关闭方式" Margin="0,20,0,0" MinWidth="170"
+                          ItemsSource="{x:Bind Data.TrayPopupCloseModes, Mode=OneTime}"
+                          SelectedValuePath="Item1"
+                          DisplayMemberPath="Item2"
+                          SelectedItem="{x:Bind Data.TrayPopupCloseMode, Mode=TwoWay}"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

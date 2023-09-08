@@ -51,7 +51,7 @@ namespace Eyeshade.Views
             dialog.PrimaryButtonText = "确认";
             dialog.DefaultButton = ContentDialogButton.Primary;
             dialog.Content = e;
-            
+
             await dialog.ShowAsync();
         }
     }
@@ -151,6 +151,58 @@ namespace Eyeshade.Views
                     AlarmClockModule.SetRingerVolume(value);
                     OnPropertyChanged();
                 }
+            }
+        }
+        public Tuple<AlarmClockTrayPopupShowModes, string> TrayPopupShowMode
+        {
+            get
+            {
+                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupShowMode : AlarmClockTrayPopupShowModes.TrayIconHover;
+                return TrayPopupShowModes.First(x => x.Item1 == currentValue);
+            }
+            set
+            {
+                if (AlarmClockModule != null && value.Item1 != AlarmClockModule.TrayPopupShowMode)
+                {
+                    AlarmClockModule.SetTrayPopupShowMode(value.Item1);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public Tuple<AlarmClockTrayPopupShowModes, string>[] TrayPopupShowModes
+        {
+            get
+            {
+                return new[] {
+                    new Tuple<AlarmClockTrayPopupShowModes, string>(AlarmClockTrayPopupShowModes.TrayIconHover, "鼠标在托盘图标悬停"),
+                    new Tuple<AlarmClockTrayPopupShowModes, string>(AlarmClockTrayPopupShowModes.TrayIconClick, "鼠标点击托盘图标")
+                };
+            }
+        }
+        public Tuple<AlarmClockTrayPopupCloseModes, string> TrayPopupCloseMode
+        {
+            get
+            {
+                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupCloseMode : AlarmClockTrayPopupCloseModes.Deactived;
+                return TrayPopupCloseModes.First(x => x.Item1 == currentValue);
+            }
+            set
+            {
+                if (AlarmClockModule != null && value.Item1 != AlarmClockModule.TrayPopupCloseMode)
+                {
+                    AlarmClockModule.SetTrayPopupCloseMode(value.Item1);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public Tuple<AlarmClockTrayPopupCloseModes, string>[] TrayPopupCloseModes
+        {
+            get
+            {
+                return new[] {
+                    new Tuple<AlarmClockTrayPopupCloseModes, string>(AlarmClockTrayPopupCloseModes.Deactived, "窗口失去焦点"),
+                    new Tuple<AlarmClockTrayPopupCloseModes, string>(AlarmClockTrayPopupCloseModes.TrayIconClick, "鼠标点击托盘图标")
+                };
             }
         }
 

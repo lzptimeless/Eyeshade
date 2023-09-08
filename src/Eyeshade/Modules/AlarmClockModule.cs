@@ -46,6 +46,8 @@ namespace Eyeshade.Modules
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
         public int RingerVolume => _userConfig.RingerVolume;
+        public AlarmClockTrayPopupShowModes TrayPopupShowMode => _userConfig.TrayPopupShowMode;
+        public AlarmClockTrayPopupCloseModes TrayPopupCloseMode => _userConfig.TrayPopupCloseMode;
         public TimeSpan TotalTime => _totalTime;
         public TimeSpan RemainingTime
         {
@@ -194,6 +196,18 @@ namespace Eyeshade.Modules
             if (value < 0) throw new ArgumentOutOfRangeException(nameof(value), value, "Must bigger than or equal to 0");
 
             _userConfig.RingerVolume = value;
+            _userConfig.Save();
+        }
+
+        public void SetTrayPopupShowMode(AlarmClockTrayPopupShowModes value)
+        {
+            _userConfig.TrayPopupShowMode = value;
+            _userConfig.Save();
+        }
+
+        public void SetTrayPopupCloseMode(AlarmClockTrayPopupCloseModes value)
+        {
+            _userConfig.TrayPopupCloseMode = value;
             _userConfig.Save();
         }
 
@@ -370,6 +384,8 @@ namespace Eyeshade.Modules
         public TimeSpan WorkTime { get; set; } = TimeSpan.FromMinutes(45);
         public TimeSpan RestingTime { get; set; } = TimeSpan.FromMinutes(4);
         public int RingerVolume { get; set; } = 100;
+        public AlarmClockTrayPopupShowModes TrayPopupShowMode { get; set; }
+        public AlarmClockTrayPopupCloseModes TrayPopupCloseMode { get; set; }
 
         public void Load()
         {
@@ -380,26 +396,50 @@ namespace Eyeshade.Modules
 
                 foreach (var itemNode in xdoc.Root.Elements())
                 {
-                    if (itemNode.Name.LocalName == nameof(WorkTime))
+                    switch (itemNode.Name.LocalName)
                     {
-                        if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
-                        {
-                            WorkTime = value;
-                        }
-                    }
-                    else if (itemNode.Name.LocalName == nameof(RestingTime))
-                    {
-                        if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
-                        {
-                            RestingTime = value;
-                        }
-                    }
-                    else if (itemNode.Name.LocalName == nameof(RingerVolume))
-                    {
-                        if (int.TryParse(itemNode.Value, out int value))
-                        {
-                            RingerVolume = value;
-                        }
+                        case nameof(WorkTime):
+                            {
+                                if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
+                                {
+                                    WorkTime = value;
+                                }
+                            }
+                            break;
+                        case nameof(RestingTime):
+                            {
+                                if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
+                                {
+                                    RestingTime = value;
+                                }
+                            }
+                            break;
+                        case nameof(RingerVolume):
+                            {
+                                if (int.TryParse(itemNode.Value, out int value))
+                                {
+                                    RingerVolume = value;
+                                }
+                            }
+                            break;
+                        case nameof(TrayPopupShowMode):
+                            {
+                                if (Enum.TryParse(itemNode.Value, out AlarmClockTrayPopupShowModes value))
+                                {
+                                    TrayPopupShowMode = value;
+                                }
+                            }
+                            break;
+                        case nameof(TrayPopupCloseMode):
+                            {
+                                if (Enum.TryParse(itemNode.Value, out AlarmClockTrayPopupCloseModes value))
+                                {
+                                    TrayPopupCloseMode = value;
+                                }
+                            }
+                            break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -417,7 +457,9 @@ namespace Eyeshade.Modules
                 xdoc.Add(new XElement("UserConfig",
                     new XElement(nameof(WorkTime), WorkTime.ToString()),
                     new XElement(nameof(RestingTime), RestingTime.ToString()),
-                    new XElement(nameof(RingerVolume), RingerVolume.ToString())
+                    new XElement(nameof(RingerVolume), RingerVolume.ToString()),
+                    new XElement(nameof(TrayPopupShowMode), TrayPopupShowMode.ToString()),
+                    new XElement(nameof(TrayPopupCloseMode), TrayPopupCloseMode.ToString())
                 ));
 
                 xdoc.Save(_configFilePath);
@@ -463,5 +505,17 @@ namespace Eyeshade.Modules
     {
         Work,
         Resting
+    }
+
+    public enum AlarmClockTrayPopupShowModes
+    {
+        TrayIconHover,
+        TrayIconClick
+    }
+
+    public enum AlarmClockTrayPopupCloseModes
+    {
+        Deactived,
+        TrayIconClick
     }
 }

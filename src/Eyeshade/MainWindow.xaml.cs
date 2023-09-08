@@ -18,6 +18,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Media.Core;
@@ -42,7 +43,6 @@ namespace Eyeshade
         private ILogWrapper? _logger;
         private AlarmClockModule? _alarmClockModule;
         private MediaPlayer _mediaPlayer;
-        private readonly Timer _trayPopupCloseTimer;
         private readonly Timer _trayPopupShowTimer;
         #endregion
 
@@ -64,16 +64,16 @@ namespace Eyeshade
             // 设置托盘图标
             _trayIcon = new TrayIcon.TrayIcon(_hWnd, 0);
             _trayIcon.AddMenuItem(0, "关闭菜单"); // 这个选项触发时什么也不做
-            _trayIcon.AddMenuItem(1, "打开主窗口");
+            _trayIcon.AddMenuItem(1, "马上休息");
             _trayIcon.AddMenuItem(2, "退出");
             _trayIcon.Select += _trayIcon_Select;
             _trayIcon.PopupOpen += _trayIcon_PopupOpen;
             _trayIcon.PopupClose += _trayIcon_PopupClose;
             _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
+            Activated += MainWindow_Activated;
 
             // 设置托盘窗口开启关闭计时器
             _trayPopupShowTimer = new Timer(TrayPopupShowTimerCallback);
-            _trayPopupCloseTimer = new Timer(TrayPopupCloseTimerCallback);
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
@@ -98,6 +98,7 @@ namespace Eyeshade
             PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_HIDE);
         }
 
+        #region AlarmClick
         private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
         {
             DispatcherQueue.TryEnqueue(() =>
@@ -187,40 +188,52 @@ namespace Eyeshade
             AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.Default);
             AppWindow.Hide();
         }
+        #endregion
 
         #region TrayIcon
         private void _trayIcon_Select(object? sender, EventArgs e)
         {
             if (AppWindow.IsVisible)
             {
-                AppWindow.Hide();
+                if (_alarmClockModule?.TrayPopupCloseMode == AlarmClockTrayPopupCloseModes.TrayIconClick)
+                {
+                    AppWindow.Hide();
+                }
             }
             else
             {
-                ShowNearToTrayIcon();
+                if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconClick)
+                {
+                    ShowNearToTrayIcon();
+                }
             }
         }
 
         private void _trayIcon_PopupOpen(object? sender, EventArgs e)
         {
-            _trayPopupCloseTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.5), Timeout.InfiniteTimeSpan);
+            if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
+            {
+                _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.3), Timeout.InfiniteTimeSpan);
+            }
         }
 
         private void _trayIcon_PopupClose(object? sender, EventArgs e)
         {
-            _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            _trayPopupCloseTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+            if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
+            {
+                _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            }
         }
 
-        private void Root_PointerEntered(object sender, PointerRoutedEventArgs e)
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
-            _trayPopupCloseTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-
-        private void Root_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            _trayPopupCloseTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+            if (args.WindowActivationState == WindowActivationState.Deactivated)
+            {
+                if (_alarmClockModule?.TrayPopupCloseMode == AlarmClockTrayPopupCloseModes.Deactived)
+                {
+                    AppWindow?.Hide();
+                }
+            }
         }
 
         private void TrayPopupShowTimerCallback(object? state)
@@ -243,8 +256,11 @@ namespace Eyeshade
         {
             if (e.Id == 1)
             {
-                // 打开主窗口
-                ShowNearToTrayIcon();
+                // 马上休息
+                if (_alarmClockModule?.State == AlarmClockStates.Work)
+                {
+                    _alarmClockModule.WorkOrRest();
+                }
             }
             else if (e.Id == 2)
             {
@@ -277,6 +293,8 @@ namespace Eyeshade
         /// </summary>
         private void ShowNearToTrayIcon()
         {
+            if (AppWindow == null) return;
+
             if (PInvoke.IsIconic(new HWND(_hWnd)) || PInvoke.IsZoomed(new HWND(_hWnd))) // 窗口是否最小化或最大化
             {
                 PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_NORMAL);
