@@ -95,9 +95,18 @@ namespace Eyeshade
 
         public void ShowHide()
         {
+            // 显示托盘图标
+            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
             PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_HIDE);
         }
 
+        public void ShowNormal()
+        {
+            // 显示托盘图标
+            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
+            Thread.Sleep(200); // 等待托盘图标显示完成ShowNearToTrayIcon才能获取到正确的显示位置
+            ShowNearToTrayIcon();
+        }
         #region AlarmClick
         private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
         {
@@ -278,9 +287,6 @@ namespace Eyeshade
 
         private void Root_Loaded(object sender, RoutedEventArgs e)
         {
-            // 显示托盘图标
-            _trayIcon.Show(@"Images\TrayIcon\100.ico", Title);
-
             var module = _alarmClockModule;
             if (module != null)
             {

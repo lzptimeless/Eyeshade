@@ -72,7 +72,7 @@ namespace Eyeshade
             }
             else
             {
-                m_window.Activate();
+                m_window.ShowNormal();
             }
         }
     }
