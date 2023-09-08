@@ -56,7 +56,11 @@ namespace Eyeshade
             Root.InvalidateMeasure();
             if (Root.DesiredSize.Width > 0)
             {
-                return Root.DesiredSize;
+                return new Size
+                {
+                    Width = Root.DesiredSize.Width + 2, // 加上窗口border的像素
+                    Height = Root.DesiredSize.Height + 2 // 加上窗口border的像素
+                };
             }
             else
             {

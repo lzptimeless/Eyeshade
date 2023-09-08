@@ -8,6 +8,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
     <Grid x:Name="Root">
-        <TextBlock Text="{x:Bind Data.Tooltip, Mode=OneWay}" TextWrapping="Wrap" Margin="8" VerticalAlignment="Center" TextAlignment="Center"/>
+        <TextBlock Text="{x:Bind Data.Tooltip, Mode=OneWay}" TextWrapping="NoWrap" Margin="8" VerticalAlignment="Center" TextAlignment="Center"/>
     </Grid>
 </Window>
