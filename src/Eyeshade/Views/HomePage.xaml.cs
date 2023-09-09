@@ -199,7 +199,7 @@ namespace Eyeshade.Views
             get
             {
                 int countdown = 0;
-                if (_remainingTime.TotalMinutes > 1) countdown = (int)Math.Round(_remainingTime.TotalMinutes);
+                if (_remainingTime.TotalMinutes > 1) countdown = (int)_remainingTime.TotalMinutes;
                 else countdown = (int)_remainingTime.TotalSeconds;
 
                 return countdown;
