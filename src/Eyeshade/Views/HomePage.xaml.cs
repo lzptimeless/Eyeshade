@@ -79,6 +79,7 @@ namespace Eyeshade.Views
             {
                 if (sender.IsVisible)
                 {
+                    ReadData(); // 立刻刷新再等待_countdownTimer刷新
                     _countdownTimer.Start();
                 }
                 else
