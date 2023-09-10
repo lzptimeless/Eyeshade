@@ -78,7 +78,7 @@ namespace Eyeshade.FuncModule
 
         #region events
         public event EventHandler<EyeshadeStateChangedArgs>? StateChanged;
-        public event EventHandler<EyeshadeCoundownProgressChangedArgs>? ProgressChanged;
+        public event EventHandler<EyeshadeCountdownProgressChangedArgs>? ProgressChanged;
         public event EventHandler<EyeshadeIsPausedChangedArgs>? IsPausedChanged;
         #endregion
 
@@ -289,7 +289,7 @@ namespace Eyeshade.FuncModule
             if (progress > 0.25 || remainingms > 10000) SetNextProgressTimer();
             // else SetNextProgressTimer(); // 这个情况会在CountdownCallback调用，所以这里就不重复设置了
 
-            ProgressChanged?.Invoke(this, new EyeshadeCoundownProgressChangedArgs(progress));
+            ProgressChanged?.Invoke(this, new EyeshadeCountdownProgressChangedArgs(progress));
         }
 
         private void SetIsStartWithSystem(bool value, string currentLauncherPath)

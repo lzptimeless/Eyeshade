@@ -21,7 +21,6 @@ namespace Eyeshade.TrayIcon
         private string? _iconPath;
         private string? _tooltip;
         private uint _wmMessageId;
-        private Windows.Win32.UI.Shell.SUBCLASSPROC? _WndProc;
         private Win32PopupMenu? _popupMenu;
         private bool _isShow;
         #endregion
@@ -94,13 +93,6 @@ namespace Eyeshade.TrayIcon
                 throw new Win32Exception();
 
             _isShow = true;
-
-            if (_WndProc == null)
-            {
-                _WndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
-                if (!PInvoke.SetWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0, 0))
-                    throw new Win32Exception();
-            }
         }
 
         public void SetIcon(string icoFilePath)
@@ -197,31 +189,7 @@ namespace Eyeshade.TrayIcon
             return popupPosition;
         }
 
-        public void Dispose()
-        {
-            _icon?.Dispose();
-            if (_WndProc != null)
-            {
-                PInvoke.RemoveWindowSubclass(new Windows.Win32.Foundation.HWND(_hWnd), _WndProc, 0);
-                _WndProc = null;
-            }
-
-            if (_popupMenu != null)
-            {
-                _popupMenu.Dispose();
-                _popupMenu = null;
-            }
-
-            GC.SuppressFinalize(this);
-        }
-        #endregion
-
-        #region private methods
-        private Windows.Win32.Foundation.LRESULT WndProc(Windows.Win32.Foundation.HWND hWnd,
-            uint uMsg,
-            Windows.Win32.Foundation.WPARAM wParam,
-            Windows.Win32.Foundation.LPARAM lParam,
-            nuint uIdSubclass, nuint dwRefData)
+        public void ProcessWindowMessage(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam)
         {
             if (uMsg == _wmMessageId)
             {
@@ -256,8 +224,19 @@ namespace Eyeshade.TrayIcon
                 if (_popupMenu?.ContainsMenuItemId(menuItemId) == true)
                     MenuItemExecute?.Invoke(this, new TrayIconMenuItemExecuteArgs(menuItemId));
             }
+        }
 
-            return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        public void Dispose()
+        {
+            _icon?.Dispose();
+
+            if (_popupMenu != null)
+            {
+                _popupMenu.Dispose();
+                _popupMenu = null;
+            }
+
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

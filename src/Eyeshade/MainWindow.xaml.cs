@@ -42,12 +42,13 @@ namespace Eyeshade
         private readonly TrayIcon.TrayIcon _trayIcon;
         private readonly IntPtr _hWnd;
         private ILogWrapper? _logger;
-        private EyeshadeModule? _alarmClockModule;
+        private EyeshadeModule? _eyeshadeModule;
         private MediaPlayer _mediaPlayer;
         private readonly Timer _trayPopupShowTimer;
         private readonly Timer _trayPopupHideTimer;
         private TrayIconTooltipWindow? _trayTooltipWindow;
         private readonly double _dipRateVirtualToPhysical;
+        private readonly Windows.Win32.UI.Shell.SUBCLASSPROC _wndProc;
         #endregion
 
         public MainWindow()
@@ -85,18 +86,28 @@ namespace Eyeshade
 
             // 设置音效播放器
             _mediaPlayer = new MediaPlayer();
+
+            // 设置窗口消息处理函数
+            _wndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
+            if (!PInvoke.SetWindowSubclass(new HWND(_hWnd), _wndProc, 0, 0))
+                throw new Win32Exception();
+
+            // 注册以在系统暂停或恢复时接收通知
+            var hPowerNotify = PInvoke.RegisterSuspendResumeNotification(new HANDLE(_hWnd), Windows.Win32.UI.WindowsAndMessaging.REGISTER_NOTIFICATION_FLAGS.DEVICE_NOTIFY_WINDOW_HANDLE);
+            if (hPowerNotify.IsNull)
+                throw new Win32Exception();
         }
 
         public MainWindow(ILogWrapper logger) : this()
         {
             _logger = logger;
-            _alarmClockModule = new EyeshadeModule(logger);
-            _alarmClockModule.StateChanged += _alarmClockModule_StateChanged;
-            _alarmClockModule.IsPausedChanged += _alarmClockModule_IsPausedChanged;
-            _alarmClockModule.ProgressChanged += _alarmClockModule_ProgressChanged;
+            _eyeshadeModule = new EyeshadeModule(logger);
+            _eyeshadeModule.StateChanged += _alarmClockModule_StateChanged;
+            _eyeshadeModule.IsPausedChanged += _alarmClockModule_IsPausedChanged;
+            _eyeshadeModule.ProgressChanged += _alarmClockModule_ProgressChanged;
         }
 
-        public EyeshadeModule? AlarmClockModule => _alarmClockModule;
+        public EyeshadeModule? AlarmClockModule => _eyeshadeModule;
 
         public void ShowHide()
         {
@@ -112,6 +123,27 @@ namespace Eyeshade
             Thread.Sleep(200); // 等待托盘图标显示完成ShowNearToTrayIcon才能获取到正确的显示位置
             ShowNearToTrayIcon();
         }
+
+        private LRESULT WndProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam,
+            nuint uIdSubclass, nuint dwRefData)
+        {
+            if (uMsg == PInvoke.WM_POWERBROADCAST)
+            {
+                if (PInvoke.PBT_APMSUSPEND == wParam)
+                {
+                    _eyeshadeModule?.Pause();
+                }
+                else if (PInvoke.PBT_APMRESUMESUSPEND == wParam || // 仅当应用程序在计算机挂起之前收到 PBT_APMSUSPEND 事件时，应用程序才能接收此事件。
+                    PInvoke.PBT_APMRESUMECRITICAL == wParam) // 通知应用程序系统已恢复操作。 此事件可以指示部分或所有应用程序未收到 PBT_APMSUSPEND 事件
+                {
+                    _eyeshadeModule?.Resume();
+                }
+            }
+
+            _trayIcon.ProcessWindowMessage(hWnd, uMsg, wParam, lParam);
+            return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+
         #region AlarmClick
         private void _alarmClockModule_StateChanged(object? sender, EyeshadeStateChangedArgs e)
         {
@@ -141,7 +173,7 @@ namespace Eyeshade
             });
         }
 
-        private void _alarmClockModule_ProgressChanged(object? sender, EyeshadeCoundownProgressChangedArgs e)
+        private void _alarmClockModule_ProgressChanged(object? sender, EyeshadeCountdownProgressChangedArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
@@ -166,7 +198,7 @@ namespace Eyeshade
         private string GetCurrentStateTrayIcon()
         {
             string trayIcon = @"Images\TrayIcon\100.ico";
-            var module = _alarmClockModule;
+            var module = _eyeshadeModule;
             if (module != null)
             {
                 var progress = module.Progress;
@@ -211,14 +243,14 @@ namespace Eyeshade
         {
             if (AppWindow.IsVisible)
             {
-                if (_alarmClockModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.TrayIconClick)
+                if (_eyeshadeModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.TrayIconClick)
                 {
                     AppWindow.Hide();
                 }
             }
             else
             {
-                if (_alarmClockModule?.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconClick)
+                if (_eyeshadeModule?.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconClick)
                 {
                     ShowNearToTrayIcon();
                 }
@@ -241,7 +273,7 @@ namespace Eyeshade
         {
             if (args.WindowActivationState == WindowActivationState.Deactivated)
             {
-                if (_alarmClockModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.Deactived)
+                if (_eyeshadeModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.Deactived)
                 {
                     AppWindow?.Hide();
                 }
@@ -252,7 +284,7 @@ namespace Eyeshade
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
-                var module = _alarmClockModule;
+                var module = _eyeshadeModule;
                 if (module != null)
                 {
                     if (module.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconHover)
@@ -280,9 +312,9 @@ namespace Eyeshade
         {
             DispatcherQueue?.TryEnqueue(() =>
             {
-                if (_alarmClockModule != null)
+                if (_eyeshadeModule != null)
                 {
-                    if (_alarmClockModule.TrayPopupShowMode != EyeshadeTrayPopupShowModes.TrayIconHover)
+                    if (_eyeshadeModule.TrayPopupShowMode != EyeshadeTrayPopupShowModes.TrayIconHover)
                     {
                         _trayTooltipWindow?.Hide();
                     }
@@ -295,9 +327,9 @@ namespace Eyeshade
             if (e.Id == 1)
             {
                 // 马上休息
-                if (_alarmClockModule?.State == EyeshadeStates.Work)
+                if (_eyeshadeModule?.State == EyeshadeStates.Work)
                 {
-                    _alarmClockModule.WorkOrRest();
+                    _eyeshadeModule.WorkOrRest();
                 }
             }
             else if (e.Id == 2)

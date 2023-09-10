@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace Eyeshade.FuncModule
 {
-    public class EyeshadeCoundownProgressChangedArgs : EventArgs
+    public class EyeshadeCountdownProgressChangedArgs : EventArgs
     {
-        public EyeshadeCoundownProgressChangedArgs(double progress)
+        public EyeshadeCountdownProgressChangedArgs(double progress)
         {
             Progress = progress;
         }
