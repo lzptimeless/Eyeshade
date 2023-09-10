@@ -133,6 +133,13 @@ namespace Eyeshade.Modules
         public void WorkOrRest()
         {
             _logger?.Info("WorkOrRest.");
+            if (_timerIsPaused)
+            {
+                // 暂停状态立刻休息或工作都应该有自动取消暂停的意思
+                _timerIsPaused = false;
+                IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(false));
+            }
+
             CountdownCallback(null);
         }
 
