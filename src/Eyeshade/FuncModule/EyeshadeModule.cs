@@ -10,13 +10,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Eyeshade.Modules
+namespace Eyeshade.FuncModule
 {
-    public class AlarmClockModule
+    public class EyeshadeModule
     {
         #region fields
         private readonly ILogWrapper? _logger;
-        private readonly AlarmClockConfig _userConfig;
+        private readonly EyeshadeUserConfig _userConfig;
         private readonly Timer _timer;
         private DateTime _timerStartTime;
         private TimeSpan _timerDueTime;
@@ -25,15 +25,15 @@ namespace Eyeshade.Modules
         /// WorkTime or RestingTime
         /// </summary>
         private TimeSpan _totalTime;
-        private AlarmClockStates _state;
+        private EyeshadeStates _state;
         private readonly Timer _progressTimer;
         #endregion
 
-        public AlarmClockModule(ILogWrapper? logger)
+        public EyeshadeModule(ILogWrapper? logger)
         {
             _logger = logger;
-            _userConfig = new AlarmClockConfig(logger);
-            _state = AlarmClockStates.Work;
+            _userConfig = new EyeshadeUserConfig(logger);
+            _state = EyeshadeStates.Work;
             _totalTime = _userConfig.WorkTime;
             _timerDueTime = _totalTime;
             _timer = new Timer(CountdownCallback, null, _timerDueTime, Timeout.InfiniteTimeSpan);
@@ -46,8 +46,8 @@ namespace Eyeshade.Modules
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
         public int RingerVolume => _userConfig.RingerVolume;
-        public AlarmClockTrayPopupShowModes TrayPopupShowMode => _userConfig.TrayPopupShowMode;
-        public AlarmClockTrayPopupCloseModes TrayPopupCloseMode => _userConfig.TrayPopupCloseMode;
+        public EyeshadeTrayPopupShowModes TrayPopupShowMode => _userConfig.TrayPopupShowMode;
+        public EyeshadeTrayPopupCloseModes TrayPopupCloseMode => _userConfig.TrayPopupCloseMode;
         public TimeSpan TotalTime => _totalTime;
         public TimeSpan RemainingTime
         {
@@ -73,13 +73,13 @@ namespace Eyeshade.Modules
             }
         }
         public bool IsPaused => _timerIsPaused;
-        public AlarmClockStates State => _state;
+        public EyeshadeStates State => _state;
         #endregion
 
         #region events
-        public event EventHandler<AlarmClockStateChangedArgs>? StateChanged;
-        public event EventHandler<AlarmClockProgressChangedArgs>? ProgressChanged;
-        public event EventHandler<AlarmClockIsPausedChangedArgs>? IsPausedChanged;
+        public event EventHandler<EyeshadeStateChangedArgs>? StateChanged;
+        public event EventHandler<EyeshadeCoundownProgressChangedArgs>? ProgressChanged;
+        public event EventHandler<EyeshadeIsPausedChangedArgs>? IsPausedChanged;
         #endregion
 
         #region public methods
@@ -137,7 +137,7 @@ namespace Eyeshade.Modules
             {
                 // 暂停状态立刻休息或工作都应该有自动取消暂停的意思
                 _timerIsPaused = false;
-                IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(false));
+                IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(false));
             }
 
             CountdownCallback(null);
@@ -153,7 +153,7 @@ namespace Eyeshade.Modules
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
             _timerIsPaused = true;
             _progressTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(true));
+            IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(true));
         }
 
         public void Resume()
@@ -167,7 +167,7 @@ namespace Eyeshade.Modules
             _timerStartTime = DateTime.Now;
             _timerIsPaused = false;
             SetNextProgressTimer();
-            IsPausedChanged?.Invoke(this, new AlarmClockIsPausedChangedArgs(false));
+            IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(false));
         }
 
         public void SetWorkTime(TimeSpan value)
@@ -178,7 +178,7 @@ namespace Eyeshade.Modules
             _logger?.Info($"Set WorkTime {value}");
             _userConfig.WorkTime = value;
             _userConfig.Save();
-            if (State == AlarmClockStates.Work)
+            if (State == EyeshadeStates.Work)
             {
                 SetTotalTime(value);
             }
@@ -192,7 +192,7 @@ namespace Eyeshade.Modules
             _logger?.Info($"Set RestingTime {value}");
             _userConfig.RestingTime = value;
             _userConfig.Save();
-            if (State == AlarmClockStates.Resting)
+            if (State == EyeshadeStates.Resting)
             {
                 SetTotalTime(value);
             }
@@ -206,13 +206,13 @@ namespace Eyeshade.Modules
             _userConfig.Save();
         }
 
-        public void SetTrayPopupShowMode(AlarmClockTrayPopupShowModes value)
+        public void SetTrayPopupShowMode(EyeshadeTrayPopupShowModes value)
         {
             _userConfig.TrayPopupShowMode = value;
             _userConfig.Save();
         }
 
-        public void SetTrayPopupCloseMode(AlarmClockTrayPopupCloseModes value)
+        public void SetTrayPopupCloseMode(EyeshadeTrayPopupCloseModes value)
         {
             _userConfig.TrayPopupCloseMode = value;
             _userConfig.Save();
@@ -252,8 +252,8 @@ namespace Eyeshade.Modules
         #region private methods
         private void CountdownCallback(object? state)
         {
-            _state = _state == AlarmClockStates.Work ? AlarmClockStates.Resting : AlarmClockStates.Work;
-            _totalTime = _state == AlarmClockStates.Work ? _userConfig.WorkTime : _userConfig.RestingTime;
+            _state = _state == EyeshadeStates.Work ? EyeshadeStates.Resting : EyeshadeStates.Work;
+            _totalTime = _state == EyeshadeStates.Work ? _userConfig.WorkTime : _userConfig.RestingTime;
             _timerDueTime = _totalTime;
             _timer.Change(_timerDueTime, Timeout.InfiniteTimeSpan);
             _timerStartTime = DateTime.Now;
@@ -261,7 +261,7 @@ namespace Eyeshade.Modules
 
             _logger?.Info($"Change state to: {_state}, TotalTime: {_totalTime}");
 
-            StateChanged?.Invoke(this, new AlarmClockStateChangedArgs(_state));
+            StateChanged?.Invoke(this, new EyeshadeStateChangedArgs(_state));
         }
 
         private void SetNextProgressTimer()
@@ -289,7 +289,7 @@ namespace Eyeshade.Modules
             if (progress > 0.25 || remainingms > 10000) SetNextProgressTimer();
             // else SetNextProgressTimer(); // 这个情况会在CountdownCallback调用，所以这里就不重复设置了
 
-            ProgressChanged?.Invoke(this, new AlarmClockProgressChangedArgs(progress));
+            ProgressChanged?.Invoke(this, new EyeshadeCoundownProgressChangedArgs(progress));
         }
 
         private void SetIsStartWithSystem(bool value, string currentLauncherPath)
@@ -372,157 +372,5 @@ namespace Eyeshade.Modules
             }
         }
         #endregion
-    }
-
-    public class AlarmClockConfig
-    {
-        private readonly string ConfigFileName = "user-config.xml";
-        private readonly ILogWrapper? _logger;
-        private readonly string _configFilePath;
-
-        public AlarmClockConfig(ILogWrapper? logger)
-        {
-            _logger = logger;
-            _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
-
-            Load();
-        }
-
-        public TimeSpan WorkTime { get; set; } = TimeSpan.FromMinutes(45);
-        public TimeSpan RestingTime { get; set; } = TimeSpan.FromMinutes(4);
-        public int RingerVolume { get; set; } = 100;
-        public AlarmClockTrayPopupShowModes TrayPopupShowMode { get; set; }
-        public AlarmClockTrayPopupCloseModes TrayPopupCloseMode { get; set; }
-
-        public void Load()
-        {
-            try
-            {
-                XDocument xdoc = XDocument.Load(_configFilePath);
-                if (xdoc.Root == null) return;
-
-                foreach (var itemNode in xdoc.Root.Elements())
-                {
-                    switch (itemNode.Name.LocalName)
-                    {
-                        case nameof(WorkTime):
-                            {
-                                if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
-                                {
-                                    WorkTime = value;
-                                }
-                            }
-                            break;
-                        case nameof(RestingTime):
-                            {
-                                if (TimeSpan.TryParse(itemNode.Value, out TimeSpan value) && value.TotalMinutes >= 1)
-                                {
-                                    RestingTime = value;
-                                }
-                            }
-                            break;
-                        case nameof(RingerVolume):
-                            {
-                                if (int.TryParse(itemNode.Value, out int value))
-                                {
-                                    RingerVolume = value;
-                                }
-                            }
-                            break;
-                        case nameof(TrayPopupShowMode):
-                            {
-                                if (Enum.TryParse(itemNode.Value, out AlarmClockTrayPopupShowModes value))
-                                {
-                                    TrayPopupShowMode = value;
-                                }
-                            }
-                            break;
-                        case nameof(TrayPopupCloseMode):
-                            {
-                                if (Enum.TryParse(itemNode.Value, out AlarmClockTrayPopupCloseModes value))
-                                {
-                                    TrayPopupCloseMode = value;
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.Warn(ex, $"Load {ConfigFileName} failed.");
-            }
-        }
-
-        public void Save()
-        {
-            try
-            {
-                XDocument xdoc = new XDocument();
-                xdoc.Add(new XElement("UserConfig",
-                    new XElement(nameof(WorkTime), WorkTime.ToString()),
-                    new XElement(nameof(RestingTime), RestingTime.ToString()),
-                    new XElement(nameof(RingerVolume), RingerVolume.ToString()),
-                    new XElement(nameof(TrayPopupShowMode), TrayPopupShowMode.ToString()),
-                    new XElement(nameof(TrayPopupCloseMode), TrayPopupCloseMode.ToString())
-                ));
-
-                xdoc.Save(_configFilePath);
-            }
-            catch (Exception ex)
-            {
-                _logger?.Warn(ex, $"Save {ConfigFileName} failed.");
-            }
-        }
-    }
-
-    public class AlarmClockStateChangedArgs : EventArgs
-    {
-        public AlarmClockStateChangedArgs(AlarmClockStates state)
-        {
-            State = state;
-        }
-
-        public AlarmClockStates State { get; private set; }
-    }
-
-    public class AlarmClockProgressChangedArgs : EventArgs
-    {
-        public AlarmClockProgressChangedArgs(double progress)
-        {
-            Progress = progress;
-        }
-
-        public double Progress { get; private set; }
-    }
-
-    public class AlarmClockIsPausedChangedArgs : EventArgs
-    {
-        public AlarmClockIsPausedChangedArgs(bool isPause)
-        {
-            IsPause = isPause;
-        }
-
-        public bool IsPause { get; private set; }
-    }
-
-    public enum AlarmClockStates
-    {
-        Work,
-        Resting
-    }
-
-    public enum AlarmClockTrayPopupShowModes
-    {
-        TrayIconHover,
-        TrayIconClick
-    }
-
-    public enum AlarmClockTrayPopupCloseModes
-    {
-        Deactived,
-        TrayIconClick
     }
 }

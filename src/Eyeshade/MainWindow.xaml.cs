@@ -1,5 +1,5 @@
 using Eyeshade.Log;
-using Eyeshade.Modules;
+using Eyeshade.FuncModule;
 using Eyeshade.TrayIcon;
 using Microsoft.Graphics.Display;
 using Microsoft.UI.Xaml;
@@ -42,7 +42,7 @@ namespace Eyeshade
         private readonly TrayIcon.TrayIcon _trayIcon;
         private readonly IntPtr _hWnd;
         private ILogWrapper? _logger;
-        private AlarmClockModule? _alarmClockModule;
+        private EyeshadeModule? _alarmClockModule;
         private MediaPlayer _mediaPlayer;
         private readonly Timer _trayPopupShowTimer;
         private readonly Timer _trayPopupHideTimer;
@@ -90,13 +90,13 @@ namespace Eyeshade
         public MainWindow(ILogWrapper logger) : this()
         {
             _logger = logger;
-            _alarmClockModule = new AlarmClockModule(logger);
+            _alarmClockModule = new EyeshadeModule(logger);
             _alarmClockModule.StateChanged += _alarmClockModule_StateChanged;
             _alarmClockModule.IsPausedChanged += _alarmClockModule_IsPausedChanged;
             _alarmClockModule.ProgressChanged += _alarmClockModule_ProgressChanged;
         }
 
-        public AlarmClockModule? AlarmClockModule => _alarmClockModule;
+        public EyeshadeModule? AlarmClockModule => _alarmClockModule;
 
         public void ShowHide()
         {
@@ -113,13 +113,13 @@ namespace Eyeshade
             ShowNearToTrayIcon();
         }
         #region AlarmClick
-        private void _alarmClockModule_StateChanged(object? sender, AlarmClockStateChangedArgs e)
+        private void _alarmClockModule_StateChanged(object? sender, EyeshadeStateChangedArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
             DispatcherQueue?.TryEnqueue(() =>
             {
-                if (e.State == AlarmClockStates.Resting)
+                if (e.State == EyeshadeStates.Resting)
                 {
                     ShowRestingWindow();
                 }
@@ -129,7 +129,7 @@ namespace Eyeshade
                 }
 
                 double volume = 1;
-                var module = sender as AlarmClockModule;
+                var module = sender as EyeshadeModule;
                 if (module != null)
                 {
                     volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
@@ -141,16 +141,16 @@ namespace Eyeshade
             });
         }
 
-        private void _alarmClockModule_ProgressChanged(object? sender, AlarmClockProgressChangedArgs e)
+        private void _alarmClockModule_ProgressChanged(object? sender, EyeshadeCoundownProgressChangedArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
             DispatcherQueue?.TryEnqueue(() =>
             {
-                var module = sender as AlarmClockModule;
+                var module = sender as EyeshadeModule;
                 if (module != null)
                 {
-                    if (module.State == AlarmClockStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
+                    if (module.State == EyeshadeStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
                     {
                         ShowNearToTrayIcon();
                     }
@@ -158,7 +158,7 @@ namespace Eyeshade
             });
         }
 
-        private void _alarmClockModule_IsPausedChanged(object? sender, AlarmClockIsPausedChangedArgs e)
+        private void _alarmClockModule_IsPausedChanged(object? sender, EyeshadeIsPausedChangedArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
         }
@@ -172,7 +172,7 @@ namespace Eyeshade
                 var progress = module.Progress;
 
                 if (module.IsPaused) trayIcon = @"Images\TrayIcon\pause.ico";
-                else if (module.State == AlarmClockStates.Resting) trayIcon = @"Images\TrayIcon\resting.ico";
+                else if (module.State == EyeshadeStates.Resting) trayIcon = @"Images\TrayIcon\resting.ico";
                 else if (progress > 0.75) trayIcon = @"Images\TrayIcon\100.ico";
                 else if (progress > 0.5) trayIcon = @"Images\TrayIcon\75.ico";
                 else if (progress > 0.25) trayIcon = @"Images\TrayIcon\50.ico";
@@ -211,14 +211,14 @@ namespace Eyeshade
         {
             if (AppWindow.IsVisible)
             {
-                if (_alarmClockModule?.TrayPopupCloseMode == AlarmClockTrayPopupCloseModes.TrayIconClick)
+                if (_alarmClockModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.TrayIconClick)
                 {
                     AppWindow.Hide();
                 }
             }
             else
             {
-                if (_alarmClockModule?.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconClick)
+                if (_alarmClockModule?.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconClick)
                 {
                     ShowNearToTrayIcon();
                 }
@@ -241,7 +241,7 @@ namespace Eyeshade
         {
             if (args.WindowActivationState == WindowActivationState.Deactivated)
             {
-                if (_alarmClockModule?.TrayPopupCloseMode == AlarmClockTrayPopupCloseModes.Deactived)
+                if (_alarmClockModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.Deactived)
                 {
                     AppWindow?.Hide();
                 }
@@ -255,7 +255,7 @@ namespace Eyeshade
                 var module = _alarmClockModule;
                 if (module != null)
                 {
-                    if (module.TrayPopupShowMode == AlarmClockTrayPopupShowModes.TrayIconHover)
+                    if (module.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconHover)
                     {
                         ShowNearToTrayIcon();
                     }
@@ -282,7 +282,7 @@ namespace Eyeshade
             {
                 if (_alarmClockModule != null)
                 {
-                    if (_alarmClockModule.TrayPopupShowMode != AlarmClockTrayPopupShowModes.TrayIconHover)
+                    if (_alarmClockModule.TrayPopupShowMode != EyeshadeTrayPopupShowModes.TrayIconHover)
                     {
                         _trayTooltipWindow?.Hide();
                     }
@@ -295,7 +295,7 @@ namespace Eyeshade
             if (e.Id == 1)
             {
                 // 马上休息
-                if (_alarmClockModule?.State == AlarmClockStates.Work)
+                if (_alarmClockModule?.State == EyeshadeStates.Work)
                 {
                     _alarmClockModule.WorkOrRest();
                 }

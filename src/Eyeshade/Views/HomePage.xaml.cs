@@ -12,7 +12,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Eyeshade.Modules;
+using Eyeshade.FuncModule;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Windows.UI.WindowManagement;
@@ -40,7 +40,7 @@ namespace Eyeshade.Views
             _countdownTimer.Interval = TimeSpan.FromSeconds(1);
         }
 
-        public AlarmClockModule? AlarmClockModule { get; set; }
+        public EyeshadeModule? AlarmClockModule { get; set; }
         public HomeData Data { get; private set; }
 
         private void _countdownTimer_Tick(object? sender, object e)
@@ -118,7 +118,7 @@ namespace Eyeshade.Views
                 }
             }
 
-            if (module.State == AlarmClockStates.Work)
+            if (module.State == EyeshadeStates.Work)
             {
                 if (WorkOrRestCommand.Label != "休息")
                 {
@@ -250,8 +250,8 @@ namespace Eyeshade.Views
             }
         }
 
-        private AlarmClockStates _alarmClockState;
-        public AlarmClockStates AlarmClockState
+        private EyeshadeStates _alarmClockState;
+        public EyeshadeStates AlarmClockState
         {
             get { return _alarmClockState; }
             set
@@ -266,13 +266,13 @@ namespace Eyeshade.Views
             }
         }
 
-        public bool IsResting => _alarmClockState == AlarmClockStates.Resting;
+        public bool IsResting => _alarmClockState == EyeshadeStates.Resting;
 
         public string StateTitle
         {
             get
             {
-                return _alarmClockState == AlarmClockStates.Work ? "工作中……" : "休息中……";
+                return _alarmClockState == EyeshadeStates.Work ? "工作中……" : "休息中……";
             }
         }
 

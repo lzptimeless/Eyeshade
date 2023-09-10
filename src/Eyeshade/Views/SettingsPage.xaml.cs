@@ -12,7 +12,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
-using Eyeshade.Modules;
+using Eyeshade.FuncModule;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using NLog;
@@ -40,7 +40,7 @@ namespace Eyeshade.Views
             this.InitializeComponent();
         }
 
-        public AlarmClockModule? AlarmClockModule
+        public EyeshadeModule? AlarmClockModule
         {
             get { return Data.AlarmClockModule; }
             set { Data.AlarmClockModule = value; }
@@ -111,8 +111,8 @@ namespace Eyeshade.Views
 
     public class SettingsData : INotifyPropertyChanged
     {
-        private AlarmClockModule? _alarmClockModule;
-        public AlarmClockModule? AlarmClockModule
+        private EyeshadeModule? _alarmClockModule;
+        public EyeshadeModule? AlarmClockModule
         {
             get { return _alarmClockModule; }
             set
@@ -206,11 +206,11 @@ namespace Eyeshade.Views
                 }
             }
         }
-        public Tuple<AlarmClockTrayPopupShowModes, string> TrayPopupShowMode
+        public Tuple<EyeshadeTrayPopupShowModes, string> TrayPopupShowMode
         {
             get
             {
-                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupShowMode : AlarmClockTrayPopupShowModes.TrayIconHover;
+                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupShowMode : EyeshadeTrayPopupShowModes.TrayIconHover;
                 return TrayPopupShowModes.First(x => x.Item1 == currentValue);
             }
             set
@@ -222,21 +222,21 @@ namespace Eyeshade.Views
                 }
             }
         }
-        public Tuple<AlarmClockTrayPopupShowModes, string>[] TrayPopupShowModes
+        public Tuple<EyeshadeTrayPopupShowModes, string>[] TrayPopupShowModes
         {
             get
             {
                 return new[] {
-                    new Tuple<AlarmClockTrayPopupShowModes, string>(AlarmClockTrayPopupShowModes.TrayIconHover, "鼠标在托盘图标悬停"),
-                    new Tuple<AlarmClockTrayPopupShowModes, string>(AlarmClockTrayPopupShowModes.TrayIconClick, "鼠标点击托盘图标")
+                    new Tuple<EyeshadeTrayPopupShowModes, string>(EyeshadeTrayPopupShowModes.TrayIconHover, "鼠标在托盘图标悬停"),
+                    new Tuple<EyeshadeTrayPopupShowModes, string>(EyeshadeTrayPopupShowModes.TrayIconClick, "鼠标点击托盘图标")
                 };
             }
         }
-        public Tuple<AlarmClockTrayPopupCloseModes, string> TrayPopupCloseMode
+        public Tuple<EyeshadeTrayPopupCloseModes, string> TrayPopupCloseMode
         {
             get
             {
-                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupCloseMode : AlarmClockTrayPopupCloseModes.Deactived;
+                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupCloseMode : EyeshadeTrayPopupCloseModes.Deactived;
                 return TrayPopupCloseModes.First(x => x.Item1 == currentValue);
             }
             set
@@ -248,13 +248,13 @@ namespace Eyeshade.Views
                 }
             }
         }
-        public Tuple<AlarmClockTrayPopupCloseModes, string>[] TrayPopupCloseModes
+        public Tuple<EyeshadeTrayPopupCloseModes, string>[] TrayPopupCloseModes
         {
             get
             {
                 return new[] {
-                    new Tuple<AlarmClockTrayPopupCloseModes, string>(AlarmClockTrayPopupCloseModes.Deactived, "窗口失去焦点"),
-                    new Tuple<AlarmClockTrayPopupCloseModes, string>(AlarmClockTrayPopupCloseModes.TrayIconClick, "鼠标点击托盘图标")
+                    new Tuple<EyeshadeTrayPopupCloseModes, string>(EyeshadeTrayPopupCloseModes.Deactived, "窗口失去焦点"),
+                    new Tuple<EyeshadeTrayPopupCloseModes, string>(EyeshadeTrayPopupCloseModes.TrayIconClick, "鼠标点击托盘图标")
                 };
             }
         }
