@@ -30,6 +30,8 @@ namespace Eyeshade.FuncModule
             _state = EyeshadeStates.Work;
 
             _timer.Completed += Countdown_Completed;
+            _timer.ProgressChanged += Countdown_ProgressChanged;
+            _timer.IsPausedChanged += Countdown_IsPausedChanged;
             _timer.Reset((int)_userConfig.WorkTime.TotalMilliseconds);
         }
 
@@ -46,16 +48,8 @@ namespace Eyeshade.FuncModule
 
         #region events
         public event EventHandler? StateChanged;
-        public event EventHandler? ProgressChanged
-        {
-            add => _timer.ProgressChanged += value;
-            remove => _timer.ProgressChanged -= value;
-        }
-        public event EventHandler? IsPausedChanged
-        {
-            add => _timer.IsPausedChanged += value;
-            remove => _timer.IsPausedChanged -= value;
-        }
+        public event EventHandler? ProgressChanged;
+        public event EventHandler? IsPausedChanged;
         #endregion
 
         #region public methods
@@ -176,6 +170,16 @@ namespace Eyeshade.FuncModule
             {
                 Work();
             }
+        }
+
+        private void Countdown_IsPausedChanged(object? sender, EventArgs e)
+        {
+            IsPausedChanged?.Invoke(this, e);
+        }
+
+        private void Countdown_ProgressChanged(object? sender, EventArgs e)
+        {
+            ProgressChanged?.Invoke(this, e);
         }
 
         private void SetIsStartWithSystem(bool value, string currentLauncherPath)
