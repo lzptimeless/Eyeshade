@@ -74,7 +74,8 @@ namespace Eyeshade
             _trayIcon.AddSubMenuItem(10, 13, "推迟30分钟");
             _trayIcon.AddMenuItem(1, "暂停"); // 或恢复
             _trayIcon.AddMenuItem(2, "马上休息");
-            _trayIcon.AddMenuItem(3, "退出");
+            _trayIcon.AddMenuItem(3, "设置");
+            _trayIcon.AddMenuItem(4, "退出");
             _trayIcon.Select += TrayIcon_Select;
             _trayIcon.MenuItemExecute += TrayIcon_MenuItemExecute;
 
@@ -188,6 +189,7 @@ namespace Eyeshade
                     DispatcherQueue?.TryEnqueue(() =>
                     {
                         ShowNearToTrayIcon();
+                        NavigateToHome();
                         // 播放提示音
                         (_mediaPlayer.Source as IDisposable)?.Dispose(); // 释放旧的音效
                         _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\stopwatch2.mp3"), UriKind.Absolute));
@@ -208,7 +210,7 @@ namespace Eyeshade
                     if (timespan.Days > 0) tooltip.Append($"{timespan.Days}天");
                     if (timespan.Hours > 0) tooltip.Append($"{timespan.Hours}小时");
 
-                    tooltip.Append($"{timespan.Minutes}分");
+                    tooltip.Append($"{timespan.Minutes}分钟");
                     _trayIcon.SetTooltip($"剩余时间 {tooltip}");
                 }
             }
@@ -356,7 +358,13 @@ namespace Eyeshade
                         }
                     }
                     break;
-                case 3: // 退出
+                case 3: // 设置
+                    {
+                        ShowNearToTrayIcon();
+                        NavigateToSettings();
+                    }
+                    break;
+                case 4: // 退出
                     {
                         Close();
                     }
@@ -448,13 +456,26 @@ namespace Eyeshade
         {
             // Add handler for ContentFrame navigation.
             ContentFrame.Navigated += On_Navigated;
-
             // NavView doesn't load any page by default, so load home page.
+            NavigateToHome();
+        }
+
+        private void NavigateToHome()
+        {
             NavView.SelectedItem = NavView.MenuItems[0];
             // If navigation occurs on SelectionChanged, this isn't needed.
             // Because we use ItemInvoked to navigate, we need to call Navigate
             // here to load the home page.
             NavView_Navigate(typeof(Views.HomePage), new EntranceNavigationTransitionInfo());
+        }
+
+        private void NavigateToSettings()
+        {
+            NavView.SelectedItem = NavView.SettingsItem;
+            // If navigation occurs on SelectionChanged, this isn't needed.
+            // Because we use ItemInvoked to navigate, we need to call Navigate
+            // here to load the settings page.
+            NavView_Navigate(typeof(Views.SettingsPage), new EntranceNavigationTransitionInfo());
         }
 
         private void NavView_ItemInvoked(NavigationView sender,
