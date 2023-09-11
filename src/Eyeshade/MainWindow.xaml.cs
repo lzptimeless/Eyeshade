@@ -43,6 +43,8 @@ namespace Eyeshade
         private readonly IntPtr _hWnd;
         private ILogWrapper? _logger;
         private EyeshadeModule? _eyeshadeModule;
+        private double _eyeshadePreProgress = 1;
+        private double _eyeshadePreRemainingMilliseconds = 0;
         private MediaPlayer _mediaPlayer;
         private readonly Timer _trayPopupShowTimer;
         private readonly Timer _trayPopupHideTimer;
@@ -102,12 +104,10 @@ namespace Eyeshade
         {
             _logger = logger;
             _eyeshadeModule = new EyeshadeModule(logger);
-            _eyeshadeModule.StateChanged += _alarmClockModule_StateChanged;
-            _eyeshadeModule.IsPausedChanged += _alarmClockModule_IsPausedChanged;
-            _eyeshadeModule.ProgressChanged += _alarmClockModule_ProgressChanged;
+            _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
+            _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
+            _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
         }
-
-        public EyeshadeModule? AlarmClockModule => _eyeshadeModule;
 
         public void ShowHide()
         {
@@ -144,14 +144,17 @@ namespace Eyeshade
             return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
         }
 
-        #region AlarmClick
-        private void _alarmClockModule_StateChanged(object? sender, EyeshadeStateChangedArgs e)
+        #region EyeshadeModule
+        private void EyeshadeModule_StateChanged(object? sender, EventArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
 
             DispatcherQueue?.TryEnqueue(() =>
             {
-                if (e.State == EyeshadeStates.Resting)
+                var module = _eyeshadeModule;
+                if (module == null) return;
+
+                if (module.State == EyeshadeStates.Resting)
                 {
                     ShowRestingWindow();
                 }
@@ -160,37 +163,43 @@ namespace Eyeshade
                     CloseRestingWindow();
                 }
 
-                double volume = 1;
-                var module = sender as EyeshadeModule;
-                if (module != null)
-                {
-                    volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
-                }
-
+                double volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
                 _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\school-chime.mp3"), UriKind.Absolute));
                 _mediaPlayer.Volume = volume;
                 _mediaPlayer.Play();
             });
         }
 
-        private void _alarmClockModule_ProgressChanged(object? sender, EyeshadeCountdownProgressChangedArgs e)
+        private void EyeshadeModule_ProgressChanged(object? sender, EventArgs e)
         {
-            _trayIcon.SetIcon(GetCurrentStateTrayIcon());
+            var module = _eyeshadeModule;
+            if (module == null) return;
 
-            DispatcherQueue?.TryEnqueue(() =>
+            var currentProgress = module.Progress;
+            var remainningMilliseconds = module.RemainingMilliseconds;
+            if (module.State == EyeshadeStates.Work)
             {
-                var module = sender as EyeshadeModule;
-                if (module != null)
+                if ((int)(_eyeshadePreProgress / 0.25) != (int)(currentProgress / 0.25))
                 {
-                    if (module.State == EyeshadeStates.Work && module.RemainingTime <= TimeSpan.FromSeconds(10))
+                    // 进度改变了1/4，需要更新托盘图标
+                    _trayIcon.SetIcon(GetCurrentStateTrayIcon());
+                }
+
+                if (_eyeshadePreRemainingMilliseconds > 10000 && remainningMilliseconds <= 10000)
+                {
+                    // 最后工作倒计时最后十秒显示主窗口
+                    DispatcherQueue?.TryEnqueue(() =>
                     {
                         ShowNearToTrayIcon();
-                    }
+                    });
                 }
-            });
+            }
+
+            _eyeshadePreProgress = currentProgress;
+            _eyeshadePreRemainingMilliseconds = remainningMilliseconds;
         }
 
-        private void _alarmClockModule_IsPausedChanged(object? sender, EyeshadeIsPausedChangedArgs e)
+        private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
         {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
         }
@@ -298,7 +307,7 @@ namespace Eyeshade
                             _trayTooltipWindow = new TrayIconTooltipWindow();
                         }
 
-                        _trayTooltipWindow.Data.Tooltip = $"Eyeshade 剩余时间 {module.RemainingTime.ToString(@"hh\:mm\:ss")}";
+                        _trayTooltipWindow.Data.Tooltip = $"Eyeshade 剩余时间 {module.RemainingMilliseconds.ToString(@"hh\:mm\:ss")}";
                         var size = _trayTooltipWindow.CalculateDesiredSize();
                         var dpiRate = _dipRateVirtualToPhysical;
                         var position = _trayIcon.CalculatePopupWindowPosition((int)(size.Width * dpiRate), (int)(size.Height * dpiRate));
@@ -329,7 +338,7 @@ namespace Eyeshade
                 // 马上休息
                 if (_eyeshadeModule?.State == EyeshadeStates.Work)
                 {
-                    _eyeshadeModule.WorkOrRest();
+                    _eyeshadeModule.Rest();
                 }
             }
             else if (e.Id == 2)
@@ -477,7 +486,7 @@ namespace Eyeshade
                 var settingsPage = ContentFrame.Content as Views.SettingsPage;
                 if (settingsPage != null)
                 {
-                    settingsPage.AlarmClockModule = AlarmClockModule;
+                    settingsPage.EyeshadeModule = _eyeshadeModule;
                 }
             }
             else if (ContentFrame.SourcePageType != null)
@@ -493,7 +502,7 @@ namespace Eyeshade
                     var homePage = ContentFrame.Content as Views.HomePage;
                     if (homePage != null)
                     {
-                        homePage.AlarmClockModule = AlarmClockModule;
+                        homePage.EyeshadeModule = _eyeshadeModule;
                     }
                 }
                 else

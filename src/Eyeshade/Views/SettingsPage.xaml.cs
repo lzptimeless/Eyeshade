@@ -40,10 +40,10 @@ namespace Eyeshade.Views
             this.InitializeComponent();
         }
 
-        public EyeshadeModule? AlarmClockModule
+        public EyeshadeModule? EyeshadeModule
         {
-            get { return Data.AlarmClockModule; }
-            set { Data.AlarmClockModule = value; }
+            get { return Data.EyeshadeModule; }
+            set { Data.EyeshadeModule = value; }
         }
         public SettingsData Data { get; set; }
 
@@ -111,18 +111,18 @@ namespace Eyeshade.Views
 
     public class SettingsData : INotifyPropertyChanged
     {
-        private EyeshadeModule? _alarmClockModule;
-        public EyeshadeModule? AlarmClockModule
+        private EyeshadeModule? _eyeshadeModule;
+        public EyeshadeModule? EyeshadeModule
         {
-            get { return _alarmClockModule; }
+            get { return _eyeshadeModule; }
             set
             {
-                if (_alarmClockModule == value) return;
+                if (_eyeshadeModule == value) return;
 
-                _alarmClockModule = value;
+                _eyeshadeModule = value;
 
                 // 初始化_isStartWithSystem
-                if (_alarmClockModule != null)
+                if (_eyeshadeModule != null)
                 {
                     if (App.IsPackaged)
                     {
@@ -130,7 +130,7 @@ namespace Eyeshade.Views
                     }
                     else
                     {
-                        var isStartWithSystem = _alarmClockModule.GetIsStartWithSystem();
+                        var isStartWithSystem = _eyeshadeModule.GetIsStartWithSystem();
                         if (isStartWithSystem != _isStartWithSystem)
                         {
                             _isStartWithSystem = isStartWithSystem;
@@ -164,7 +164,7 @@ namespace Eyeshade.Views
                     }
                     else
                     {
-                        AlarmClockModule?.SetIsStartWithSystem(value);
+                        EyeshadeModule?.SetIsStartWithSystem(value);
                         OnPropertyChanged();
                     }
                 }
@@ -172,36 +172,36 @@ namespace Eyeshade.Views
         }
         public TimeSpan WorkTime
         {
-            get { return AlarmClockModule != null ? AlarmClockModule.WorkTime : TimeSpan.Zero; }
+            get { return EyeshadeModule != null ? EyeshadeModule.WorkTime : TimeSpan.Zero; }
             set
             {
-                if (AlarmClockModule != null && value >= TimeSpan.FromMinutes(1) && value != AlarmClockModule.WorkTime)
+                if (EyeshadeModule != null && value >= TimeSpan.FromMinutes(1) && value != EyeshadeModule.WorkTime)
                 {
-                    AlarmClockModule.SetWorkTime(value);
+                    EyeshadeModule.SetWorkTime(value);
                     OnPropertyChanged();
                 }
             }
         }
         public TimeSpan RestingTime
         {
-            get { return AlarmClockModule != null ? AlarmClockModule.RestingTime : TimeSpan.Zero; }
+            get { return EyeshadeModule != null ? EyeshadeModule.RestingTime : TimeSpan.Zero; }
             set
             {
-                if (AlarmClockModule != null && value >= TimeSpan.FromMinutes(1) && value != AlarmClockModule.RestingTime)
+                if (EyeshadeModule != null && value >= TimeSpan.FromMinutes(1) && value != EyeshadeModule.RestingTime)
                 {
-                    AlarmClockModule.SetRestingTime(value);
+                    EyeshadeModule.SetRestingTime(value);
                     OnPropertyChanged();
                 }
             }
         }
         public int RingerVolume
         {
-            get { return AlarmClockModule != null ? AlarmClockModule.RingerVolume : 0; }
+            get { return EyeshadeModule != null ? EyeshadeModule.RingerVolume : 0; }
             set
             {
-                if (AlarmClockModule != null && value >= 0 && value != AlarmClockModule.RingerVolume)
+                if (EyeshadeModule != null && value >= 0 && value != EyeshadeModule.RingerVolume)
                 {
-                    AlarmClockModule.SetRingerVolume(value);
+                    EyeshadeModule.SetRingerVolume(value);
                     OnPropertyChanged();
                 }
             }
@@ -210,14 +210,14 @@ namespace Eyeshade.Views
         {
             get
             {
-                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupShowMode : EyeshadeTrayPopupShowModes.TrayIconHover;
+                var currentValue = EyeshadeModule != null ? EyeshadeModule.TrayPopupShowMode : EyeshadeTrayPopupShowModes.TrayIconHover;
                 return TrayPopupShowModes.First(x => x.Item1 == currentValue);
             }
             set
             {
-                if (AlarmClockModule != null && value.Item1 != AlarmClockModule.TrayPopupShowMode)
+                if (EyeshadeModule != null && value.Item1 != EyeshadeModule.TrayPopupShowMode)
                 {
-                    AlarmClockModule.SetTrayPopupShowMode(value.Item1);
+                    EyeshadeModule.SetTrayPopupShowMode(value.Item1);
                     OnPropertyChanged();
                 }
             }
@@ -236,14 +236,14 @@ namespace Eyeshade.Views
         {
             get
             {
-                var currentValue = AlarmClockModule != null ? AlarmClockModule.TrayPopupCloseMode : EyeshadeTrayPopupCloseModes.Deactived;
+                var currentValue = EyeshadeModule != null ? EyeshadeModule.TrayPopupCloseMode : EyeshadeTrayPopupCloseModes.Deactived;
                 return TrayPopupCloseModes.First(x => x.Item1 == currentValue);
             }
             set
             {
-                if (AlarmClockModule != null && value.Item1 != AlarmClockModule.TrayPopupCloseMode)
+                if (EyeshadeModule != null && value.Item1 != EyeshadeModule.TrayPopupCloseMode)
                 {
-                    AlarmClockModule.SetTrayPopupCloseMode(value.Item1);
+                    EyeshadeModule.SetTrayPopupCloseMode(value.Item1);
                     OnPropertyChanged();
                 }
             }

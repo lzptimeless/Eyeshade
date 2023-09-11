@@ -17,7 +17,7 @@
                 <SymbolIconSource Symbol="Pause"/>
             </XamlUICommand.IconSource>
         </XamlUICommand>
-        <XamlUICommand x:Name="WorkOrRestCommand" Label="休息" ExecuteRequested="RestCommand_ExecuteRequested" Description="马上休息">
+        <XamlUICommand x:Name="WorkOrRestCommand" Label="休息" ExecuteRequested="WorkOrRestCommand_ExecuteRequested" Description="马上休息">
             <XamlUICommand.IconSource>
                 <FontIconSource Glyph="&#xE708;" />
             </XamlUICommand.IconSource>

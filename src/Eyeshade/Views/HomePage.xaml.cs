@@ -16,6 +16,7 @@ using Eyeshade.FuncModule;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Windows.UI.WindowManagement;
+using System.Reflection;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -27,37 +28,48 @@ namespace Eyeshade.Views
     /// </summary>
     public sealed partial class HomePage : Page
     {
-        private readonly DispatcherTimer _countdownTimer;
+        private bool _isWindowVisible = true;
+        private EyeshadeModule? _eyeshadeModule;
 
         public HomePage()
         {
             Data = new HomeData();
-
             this.InitializeComponent();
-
-            _countdownTimer = new DispatcherTimer();
-            _countdownTimer.Tick += _countdownTimer_Tick;
-            _countdownTimer.Interval = TimeSpan.FromSeconds(1);
         }
 
-        public EyeshadeModule? AlarmClockModule { get; set; }
-        public HomeData Data { get; private set; }
-
-        private void _countdownTimer_Tick(object? sender, object e)
+        public EyeshadeModule? EyeshadeModule
         {
-            ReadData();
+            get { return _eyeshadeModule; }
+            set
+            {
+                if (value != _eyeshadeModule)
+                {
+                    if (_eyeshadeModule != null)
+                    {
+                        _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
+                    }
+                    _eyeshadeModule = value;
+                    if (_eyeshadeModule != null)
+                    {
+                        _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
+                    }
+                }
+            }
         }
+
+        public HomeData Data { get; private set; }
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            ReadData();
             var appWindow = (App.Current as App)?.MainWindow?.AppWindow;
             if (appWindow != null)
             {
+                _isWindowVisible = appWindow.IsVisible;
                 appWindow.Changed += AppWindow_Changed;
-                if (appWindow.IsVisible)
+
+                if (_isWindowVisible)
                 {
-                    _countdownTimer.Start();
+                    ReadData();
                 }
             }
         }
@@ -70,34 +82,47 @@ namespace Eyeshade.Views
                 appWindow.Changed -= AppWindow_Changed;
             }
 
-            _countdownTimer.Stop();
+            if (_eyeshadeModule != null)
+            {
+                _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
+            }
         }
 
         private void AppWindow_Changed(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowChangedEventArgs args)
         {
             if (args.DidVisibilityChange)
             {
-                if (sender.IsVisible)
+                _isWindowVisible = sender.IsVisible;
+                if (_isWindowVisible && IsLoaded)
                 {
-                    ReadData(); // 立刻刷新再等待_countdownTimer刷新
-                    _countdownTimer.Start();
+                    ReadData();
                 }
-                else
+            }
+        }
+
+        private void EyeshadeModule_ProgressChanged(object? sender, EventArgs e)
+        {
+            if (_isWindowVisible)
+            {
+                DispatcherQueue?.TryEnqueue(() =>
                 {
-                    _countdownTimer.Stop();
-                }
+                    if (IsLoaded)
+                    {
+                        ReadData();
+                    }
+                });
             }
         }
 
         private void ReadData()
         {
-            var module = AlarmClockModule;
+            var module = _eyeshadeModule;
             if (module == null) return;
 
-            Data.RemainingTime = module.RemainingTime;
-            Data.CountdownProgressValue = Math.Max(0, (int)(100 * module.Progress));
+            Data.RemainingMilliseconds = module.RemainingMilliseconds;
+            Data.CountdownProgressValue = Math.Min(100, Math.Max(0, (int)(100 * module.Progress)));
             Data.IsPaused = module.IsPaused;
-            Data.AlarmClockState = module.State;
+            Data.EyeshadeState = module.State;
 
             if (module.IsPaused)
             {
@@ -124,7 +149,7 @@ namespace Eyeshade.Views
                 {
                     WorkOrRestCommand.Label = "休息";
                     WorkOrRestCommand.Description = "马上休息";
-                    WorkOrRestCommand.IconSource = new FontIconSource() { Glyph= "\uE708" };
+                    WorkOrRestCommand.IconSource = new FontIconSource() { Glyph = "\uE708" };
                 }
             }
             else
@@ -140,7 +165,7 @@ namespace Eyeshade.Views
 
         private void DeferCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
         {
-            var module = AlarmClockModule;
+            var module = EyeshadeModule;
             if (module == null) return;
 
             if (args.Parameter is int)
@@ -153,7 +178,7 @@ namespace Eyeshade.Views
 
         private void PauseOrResumeCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
         {
-            var module = AlarmClockModule;
+            var module = EyeshadeModule;
             if (module == null) return;
 
             if (module.IsPaused)
@@ -167,27 +192,35 @@ namespace Eyeshade.Views
             ReadData();
         }
 
-        private void RestCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        private void WorkOrRestCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
         {
-            var module = AlarmClockModule;
+            var module = EyeshadeModule;
             if (module == null) return;
 
-            module.WorkOrRest();
-            ReadData();
+            if (module.State == EyeshadeStates.Work)
+            {
+                module.Rest();
+                ReadData();
+            }
+            else
+            {
+                module.Work();
+                ReadData();
+            }
         }
     }
 
     public class HomeData : INotifyPropertyChanged
     {
-        private TimeSpan _remainingTime;
-        public TimeSpan RemainingTime
+        private int _remainingMilliseconds;
+        public int RemainingMilliseconds
         {
-            get { return _remainingTime; }
+            get { return _remainingMilliseconds; }
             set
             {
-                if (_remainingTime != value)
+                if (_remainingMilliseconds != value)
                 {
-                    _remainingTime = value;
+                    _remainingMilliseconds = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(Countdown));
                     OnPropertyChanged(nameof(CountdownUnit));
@@ -199,9 +232,9 @@ namespace Eyeshade.Views
         {
             get
             {
-                int countdown = 0;
-                if (_remainingTime.TotalMinutes > 1) countdown = (int)_remainingTime.TotalMinutes;
-                else countdown = (int)_remainingTime.TotalSeconds;
+                int countdown;
+                if (_remainingMilliseconds > 60000) countdown = _remainingMilliseconds / 60000;
+                else countdown = _remainingMilliseconds / 1000;
 
                 return countdown;
             }
@@ -211,9 +244,9 @@ namespace Eyeshade.Views
         {
             get
             {
-                if (_remainingTime.TotalMinutes > 1)
+                if (_remainingMilliseconds > 60000)
                 {
-                    return $"分 {_remainingTime.Seconds} 秒";
+                    return $"分 {_remainingMilliseconds % 60000 / 1000} 秒";
                 }
                 else
                 {
@@ -250,15 +283,15 @@ namespace Eyeshade.Views
             }
         }
 
-        private EyeshadeStates _alarmClockState;
-        public EyeshadeStates AlarmClockState
+        private EyeshadeStates _eyeshadeState;
+        public EyeshadeStates EyeshadeState
         {
-            get { return _alarmClockState; }
+            get { return _eyeshadeState; }
             set
             {
-                if (_alarmClockState != value)
+                if (_eyeshadeState != value)
                 {
-                    _alarmClockState = value;
+                    _eyeshadeState = value;
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(StateTitle));
                     OnPropertyChanged(nameof(IsResting));
@@ -266,13 +299,13 @@ namespace Eyeshade.Views
             }
         }
 
-        public bool IsResting => _alarmClockState == EyeshadeStates.Resting;
+        public bool IsResting => _eyeshadeState == EyeshadeStates.Resting;
 
         public string StateTitle
         {
             get
             {
-                return _alarmClockState == EyeshadeStates.Work ? "工作中……" : "休息中……";
+                return _eyeshadeState == EyeshadeStates.Work ? "工作中……" : "休息中……";
             }
         }
 
