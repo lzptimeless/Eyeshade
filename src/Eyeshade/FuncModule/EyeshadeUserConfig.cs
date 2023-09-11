@@ -26,8 +26,6 @@ namespace Eyeshade.FuncModule
         public TimeSpan WorkTime { get; set; } = TimeSpan.FromMinutes(45);
         public TimeSpan RestingTime { get; set; } = TimeSpan.FromMinutes(4);
         public int RingerVolume { get; set; } = 100;
-        public EyeshadeTrayPopupShowModes TrayPopupShowMode { get; set; }
-        public EyeshadeTrayPopupCloseModes TrayPopupCloseMode { get; set; }
 
         public void Load()
         {
@@ -64,22 +62,6 @@ namespace Eyeshade.FuncModule
                                 }
                             }
                             break;
-                        case nameof(TrayPopupShowMode):
-                            {
-                                if (Enum.TryParse(itemNode.Value, out EyeshadeTrayPopupShowModes value))
-                                {
-                                    TrayPopupShowMode = value;
-                                }
-                            }
-                            break;
-                        case nameof(TrayPopupCloseMode):
-                            {
-                                if (Enum.TryParse(itemNode.Value, out EyeshadeTrayPopupCloseModes value))
-                                {
-                                    TrayPopupCloseMode = value;
-                                }
-                            }
-                            break;
                         default:
                             break;
                     }
@@ -99,9 +81,7 @@ namespace Eyeshade.FuncModule
                 xdoc.Add(new XElement("UserConfig",
                     new XElement(nameof(WorkTime), WorkTime.ToString()),
                     new XElement(nameof(RestingTime), RestingTime.ToString()),
-                    new XElement(nameof(RingerVolume), RingerVolume.ToString()),
-                    new XElement(nameof(TrayPopupShowMode), TrayPopupShowMode.ToString()),
-                    new XElement(nameof(TrayPopupCloseMode), TrayPopupCloseMode.ToString())
+                    new XElement(nameof(RingerVolume), RingerVolume.ToString())
                 ));
 
                 xdoc.Save(_configFilePath);

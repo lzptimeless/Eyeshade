@@ -32,16 +32,6 @@
                         <FontIcon Glyph="&#xE767;" />
                     </Button>
                 </Grid>
-                <ComboBox Header="托盘弹窗显示方式" Margin="0,20,0,0" MinWidth="170"
-                          ItemsSource="{x:Bind Data.TrayPopupShowModes, Mode=OneTime}"
-                          SelectedValuePath="Item1"
-                          DisplayMemberPath="Item2"
-                          SelectedItem="{x:Bind Data.TrayPopupShowMode, Mode=TwoWay}"/>
-                <ComboBox Header="托盘弹窗关闭方式" Margin="0,20,0,0" MinWidth="170"
-                          ItemsSource="{x:Bind Data.TrayPopupCloseModes, Mode=OneTime}"
-                          SelectedValuePath="Item1"
-                          DisplayMemberPath="Item2"
-                          SelectedItem="{x:Bind Data.TrayPopupCloseMode, Mode=TwoWay}"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

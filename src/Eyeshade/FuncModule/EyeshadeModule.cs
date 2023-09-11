@@ -37,8 +37,6 @@ namespace Eyeshade.FuncModule
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
         public int RingerVolume => _userConfig.RingerVolume;
-        public EyeshadeTrayPopupShowModes TrayPopupShowMode => _userConfig.TrayPopupShowMode;
-        public EyeshadeTrayPopupCloseModes TrayPopupCloseMode => _userConfig.TrayPopupCloseMode;
         public int TotalMilliseconds => _timer.TotalTime;
         public int RemainingMilliseconds => _timer.RemainingTime;
         public double Progress => _timer.Progress;
@@ -132,18 +130,6 @@ namespace Eyeshade.FuncModule
             if (value < 0 || value > 100) throw new ArgumentOutOfRangeException(nameof(value), value, "Must >= 0 and <= 100");
 
             _userConfig.RingerVolume = value;
-            _userConfig.Save();
-        }
-
-        public void SetTrayPopupShowMode(EyeshadeTrayPopupShowModes value)
-        {
-            _userConfig.TrayPopupShowMode = value;
-            _userConfig.Save();
-        }
-
-        public void SetTrayPopupCloseMode(EyeshadeTrayPopupCloseModes value)
-        {
-            _userConfig.TrayPopupCloseMode = value;
             _userConfig.Save();
         }
 

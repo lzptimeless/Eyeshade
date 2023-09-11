@@ -27,6 +27,7 @@ using Windows.Media.Playback;
 using Windows.UI.ViewManagement;
 using Windows.Win32;
 using Windows.Win32.Foundation;
+using System.Text;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -44,12 +45,8 @@ namespace Eyeshade
         private ILogWrapper? _logger;
         private EyeshadeModule? _eyeshadeModule;
         private double _eyeshadePreProgress = 1;
-        private double _eyeshadePreRemainingMilliseconds = 0;
+        private int _eyeshadePreRemainingMilliseconds = 0;
         private MediaPlayer _mediaPlayer;
-        private readonly Timer _trayPopupShowTimer;
-        private readonly Timer _trayPopupHideTimer;
-        private TrayIconTooltipWindow? _trayTooltipWindow;
-        private readonly double _dipRateVirtualToPhysical;
         private readonly Windows.Win32.UI.Shell.SUBCLASSPROC _wndProc;
         #endregion
 
@@ -60,8 +57,8 @@ namespace Eyeshade
             // 设置窗口大小
             _hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             var dpi = PInvoke.GetDpiForWindow(new HWND(_hWnd));
-            _dipRateVirtualToPhysical = dpi / 96d;
-            AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * _dipRateVirtualToPhysical), (int)(400 * _dipRateVirtualToPhysical)));
+            var dipRateVirtualToPhysical = dpi / 96d;
+            AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(300 * dipRateVirtualToPhysical), (int)(400 * dipRateVirtualToPhysical)));
 
             // 设置自定义窗口标题栏
             this.ExtendsContentIntoTitleBar = true;  // enable custom titlebar
@@ -79,14 +76,7 @@ namespace Eyeshade
             _trayIcon.AddMenuItem(2, "马上休息");
             _trayIcon.AddMenuItem(3, "退出");
             _trayIcon.Select += TrayIcon_Select;
-            _trayIcon.PopupOpen += TrayIcon_PopupOpen;
-            _trayIcon.PopupClose += TrayIcon_PopupClose;
             _trayIcon.MenuItemExecute += TrayIcon_MenuItemExecute;
-            Activated += MainWindow_Activated;
-
-            // 设置托盘窗口开启关闭计时器
-            _trayPopupShowTimer = new Timer(TrayPopupShowTimerCallback);
-            _trayPopupHideTimer = new Timer(TrayPopupHideTimerCallback);
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
@@ -117,14 +107,14 @@ namespace Eyeshade
         public void ShowHide()
         {
             // 显示托盘图标
-            _trayIcon.Show(GetCurrentStateTrayIcon(), Title);
+            _trayIcon.Show(GetCurrentStateTrayIcon(), Title, useCustomPopup: false);
             PInvoke.ShowWindow(new HWND(_hWnd), Windows.Win32.UI.WindowsAndMessaging.SHOW_WINDOW_CMD.SW_HIDE);
         }
 
         public void ShowNormal()
         {
             // 显示托盘图标
-            _trayIcon.Show(GetCurrentStateTrayIcon(), Title);
+            _trayIcon.Show(GetCurrentStateTrayIcon(), Title, useCustomPopup: false);
             Thread.Sleep(200); // 等待托盘图标显示完成ShowNearToTrayIcon才能获取到正确的显示位置
             ShowNearToTrayIcon();
         }
@@ -186,7 +176,7 @@ namespace Eyeshade
             {
                 if ((int)(_eyeshadePreProgress / 0.25) != (int)(currentProgress / 0.25))
                 {
-                    // 进度改变了1/4，需要更新托盘图标
+                    // 进度相差了1/4，需要更新托盘图标
                     _trayIcon.SetIcon(GetCurrentStateTrayIcon());
                 }
 
@@ -198,6 +188,35 @@ namespace Eyeshade
                         ShowNearToTrayIcon();
                     });
                 }
+            }
+
+            // 更新托盘tooltip提示
+            if (remainningMilliseconds > 60000)
+            {
+                // 大于1分钟则每分钟更新一次
+                if (_eyeshadePreRemainingMilliseconds / 60000 != remainningMilliseconds / 60000)
+                {
+                    var timespan = TimeSpan.FromMilliseconds(remainningMilliseconds);
+                    StringBuilder tooltip = new StringBuilder();
+                    if (timespan.Days > 0) tooltip.Append($"{timespan.Days}天");
+                    if (timespan.Hours > 0) tooltip.Append($"{timespan.Hours}小时");
+
+                    tooltip.Append($"{timespan.Minutes}分");
+                    _trayIcon.SetTooltip($"剩余时间 {timespan}");
+                }
+            }
+            else if (remainningMilliseconds > 10000)
+            {
+                // 大于10秒小于1分钟则每5秒更新一次
+                if (_eyeshadePreRemainingMilliseconds / 5000 != remainningMilliseconds / 5000)
+                {
+                    _trayIcon.SetTooltip($"剩余时间 {remainningMilliseconds / 1000}秒");
+                }
+            }
+            else
+            {
+                // 小于10秒则每秒更新一次
+                _trayIcon.SetTooltip($"剩余时间 {remainningMilliseconds / 1000}秒");
             }
 
             _eyeshadePreProgress = currentProgress;
@@ -263,83 +282,12 @@ namespace Eyeshade
         {
             if (AppWindow.IsVisible)
             {
-                if (_eyeshadeModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.TrayIconClick)
-                {
-                    AppWindow.Hide();
-                }
+                AppWindow.Hide();
             }
             else
             {
-                if (_eyeshadeModule?.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconClick)
-                {
-                    ShowNearToTrayIcon();
-                }
+                ShowNearToTrayIcon();
             }
-        }
-
-        private void TrayIcon_PopupOpen(object? sender, EventArgs e)
-        {
-            _trayPopupHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.3), Timeout.InfiniteTimeSpan);
-        }
-
-        private void TrayIcon_PopupClose(object? sender, EventArgs e)
-        {
-            _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            _trayPopupHideTimer.Change(TimeSpan.FromSeconds(0.5), Timeout.InfiniteTimeSpan);
-        }
-
-        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
-        {
-            if (args.WindowActivationState == WindowActivationState.Deactivated)
-            {
-                if (_eyeshadeModule?.TrayPopupCloseMode == EyeshadeTrayPopupCloseModes.Deactived)
-                {
-                    AppWindow?.Hide();
-                }
-            }
-        }
-
-        private void TrayPopupShowTimerCallback(object? state)
-        {
-            DispatcherQueue?.TryEnqueue(() =>
-            {
-                var module = _eyeshadeModule;
-                if (module != null)
-                {
-                    if (module.TrayPopupShowMode == EyeshadeTrayPopupShowModes.TrayIconHover)
-                    {
-                        ShowNearToTrayIcon();
-                    }
-                    else
-                    {
-                        if (_trayTooltipWindow == null)
-                        {
-                            _trayTooltipWindow = new TrayIconTooltipWindow();
-                        }
-
-                        _trayTooltipWindow.Data.Tooltip = $"Eyeshade 剩余时间 {module.RemainingMilliseconds.ToString(@"hh\:mm\:ss")}";
-                        var size = _trayTooltipWindow.CalculateDesiredSize();
-                        var dpiRate = _dipRateVirtualToPhysical;
-                        var position = _trayIcon.CalculatePopupWindowPosition((int)(size.Width * dpiRate), (int)(size.Height * dpiRate));
-                        _trayTooltipWindow.Show(position.X, position.Y, position.Width, position.Height);
-                    }
-                }
-            });
-        }
-
-        private void TrayPopupHideTimerCallback(object? state)
-        {
-            DispatcherQueue?.TryEnqueue(() =>
-            {
-                if (_eyeshadeModule != null)
-                {
-                    if (_eyeshadeModule.TrayPopupShowMode != EyeshadeTrayPopupShowModes.TrayIconHover)
-                    {
-                        _trayTooltipWindow?.Hide();
-                    }
-                }
-            });
         }
 
         private void TrayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)
@@ -372,8 +320,6 @@ namespace Eyeshade
                     break;
                 case 3: // 退出
                     {
-                        _trayTooltipWindow?.Close();
-                        _trayTooltipWindow = null;
                         Close();
                     }
                     break;

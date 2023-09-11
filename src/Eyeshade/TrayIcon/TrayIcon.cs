@@ -105,7 +105,8 @@ namespace Eyeshade.TrayIcon
             _icon = null;
             if (!string.IsNullOrEmpty(icoFilePath))
             {
-                _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON;
+                var showtip = _notifyData.uFlags & Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_SHOWTIP; // 获取旧的NIF_SHOWTIP选项
+                _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_ICON | showtip;
                 _icon = Win32Icon.FromFile(icoFilePath, 32, 32);
                 _notifyData.hIcon = _icon.Handle;
 
@@ -130,7 +131,8 @@ namespace Eyeshade.TrayIcon
                 tip[tip.Length - 1] = '\0';
             }
 
-            _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_TIP;
+            var showtip = _notifyData.uFlags & Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_SHOWTIP; // 获取旧的NIF_SHOWTIP选项
+            _notifyData.uFlags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_TIP | showtip;
             _notifyData.szTip = tip;
             if (!PInvoke.Shell_NotifyIcon(Windows.Win32.UI.Shell.NOTIFY_ICON_MESSAGE.NIM_MODIFY, _notifyData))
                 throw new Win32Exception();

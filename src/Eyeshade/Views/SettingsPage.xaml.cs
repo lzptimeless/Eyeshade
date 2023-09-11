@@ -206,58 +206,6 @@ namespace Eyeshade.Views
                 }
             }
         }
-        public Tuple<EyeshadeTrayPopupShowModes, string> TrayPopupShowMode
-        {
-            get
-            {
-                var currentValue = EyeshadeModule != null ? EyeshadeModule.TrayPopupShowMode : EyeshadeTrayPopupShowModes.TrayIconHover;
-                return TrayPopupShowModes.First(x => x.Item1 == currentValue);
-            }
-            set
-            {
-                if (EyeshadeModule != null && value.Item1 != EyeshadeModule.TrayPopupShowMode)
-                {
-                    EyeshadeModule.SetTrayPopupShowMode(value.Item1);
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public Tuple<EyeshadeTrayPopupShowModes, string>[] TrayPopupShowModes
-        {
-            get
-            {
-                return new[] {
-                    new Tuple<EyeshadeTrayPopupShowModes, string>(EyeshadeTrayPopupShowModes.TrayIconHover, "鼠标在托盘图标悬停"),
-                    new Tuple<EyeshadeTrayPopupShowModes, string>(EyeshadeTrayPopupShowModes.TrayIconClick, "鼠标点击托盘图标")
-                };
-            }
-        }
-        public Tuple<EyeshadeTrayPopupCloseModes, string> TrayPopupCloseMode
-        {
-            get
-            {
-                var currentValue = EyeshadeModule != null ? EyeshadeModule.TrayPopupCloseMode : EyeshadeTrayPopupCloseModes.Deactived;
-                return TrayPopupCloseModes.First(x => x.Item1 == currentValue);
-            }
-            set
-            {
-                if (EyeshadeModule != null && value.Item1 != EyeshadeModule.TrayPopupCloseMode)
-                {
-                    EyeshadeModule.SetTrayPopupCloseMode(value.Item1);
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public Tuple<EyeshadeTrayPopupCloseModes, string>[] TrayPopupCloseModes
-        {
-            get
-            {
-                return new[] {
-                    new Tuple<EyeshadeTrayPopupCloseModes, string>(EyeshadeTrayPopupCloseModes.Deactived, "窗口失去焦点"),
-                    new Tuple<EyeshadeTrayPopupCloseModes, string>(EyeshadeTrayPopupCloseModes.TrayIconClick, "鼠标点击托盘图标")
-                };
-            }
-        }
 
         public event EventHandler<string>? Prompt;
         public event PropertyChangedEventHandler? PropertyChanged;
