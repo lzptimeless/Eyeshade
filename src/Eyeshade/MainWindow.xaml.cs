@@ -71,12 +71,17 @@ namespace Eyeshade
             // 设置托盘图标
             _trayIcon = new TrayIcon.TrayIcon(_hWnd, 0);
             _trayIcon.AddMenuItem(0, "关闭菜单"); // 这个选项触发时什么也不做
-            _trayIcon.AddMenuItem(1, "马上休息");
-            _trayIcon.AddMenuItem(2, "退出");
-            _trayIcon.Select += _trayIcon_Select;
-            _trayIcon.PopupOpen += _trayIcon_PopupOpen;
-            _trayIcon.PopupClose += _trayIcon_PopupClose;
-            _trayIcon.MenuItemExecute += _trayIcon_MenuItemExecute;
+            _trayIcon.AddSubMenu(10, "推迟");
+            _trayIcon.AddSubMenuItem(10, 11, "推迟8分钟");
+            _trayIcon.AddSubMenuItem(10, 12, "推迟15分钟");
+            _trayIcon.AddSubMenuItem(10, 13, "推迟30分钟");
+            _trayIcon.AddMenuItem(1, "暂停"); // 或恢复
+            _trayIcon.AddMenuItem(2, "马上休息");
+            _trayIcon.AddMenuItem(3, "退出");
+            _trayIcon.Select += TrayIcon_Select;
+            _trayIcon.PopupOpen += TrayIcon_PopupOpen;
+            _trayIcon.PopupClose += TrayIcon_PopupClose;
+            _trayIcon.MenuItemExecute += TrayIcon_MenuItemExecute;
             Activated += MainWindow_Activated;
 
             // 设置托盘窗口开启关闭计时器
@@ -201,6 +206,12 @@ namespace Eyeshade
 
         private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
         {
+            var module = _eyeshadeModule;
+            if (module != null)
+            {
+                _trayIcon.SetMenuItem(1, module.IsPaused ? "恢复" : "暂停");
+            }
+
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
         }
 
@@ -248,7 +259,7 @@ namespace Eyeshade
         #endregion
 
         #region TrayIcon
-        private void _trayIcon_Select(object? sender, EventArgs e)
+        private void TrayIcon_Select(object? sender, EventArgs e)
         {
             if (AppWindow.IsVisible)
             {
@@ -266,13 +277,13 @@ namespace Eyeshade
             }
         }
 
-        private void _trayIcon_PopupOpen(object? sender, EventArgs e)
+        private void TrayIcon_PopupOpen(object? sender, EventArgs e)
         {
             _trayPopupHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _trayPopupShowTimer.Change(TimeSpan.FromSeconds(0.3), Timeout.InfiniteTimeSpan);
         }
 
-        private void _trayIcon_PopupClose(object? sender, EventArgs e)
+        private void TrayIcon_PopupClose(object? sender, EventArgs e)
         {
             _trayPopupShowTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _trayPopupHideTimer.Change(TimeSpan.FromSeconds(0.5), Timeout.InfiniteTimeSpan);
@@ -331,22 +342,58 @@ namespace Eyeshade
             });
         }
 
-        private void _trayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)
+        private void TrayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)
         {
-            if (e.Id == 1)
+            switch (e.Id)
             {
-                // 马上休息
-                if (_eyeshadeModule?.State == EyeshadeStates.Work)
-                {
-                    _eyeshadeModule.Rest();
-                }
-            }
-            else if (e.Id == 2)
-            {
-                // 退出
-                _trayTooltipWindow?.Close();
-                _trayTooltipWindow = null;
-                Close();
+                case 1: // 暂停
+                    {
+                        var module = _eyeshadeModule;
+                        if (module != null)
+                        {
+                            if (module.IsPaused)
+                            {
+                                module.Resume();
+                            }
+                            else
+                            {
+                                module.Pause();
+                            }
+                        }
+                    }
+                    break;
+                case 2: // 马上休息
+                    {
+                        if (_eyeshadeModule?.State == EyeshadeStates.Work)
+                        {
+                            _eyeshadeModule.Rest();
+                        }
+                    }
+                    break;
+                case 3: // 退出
+                    {
+                        _trayTooltipWindow?.Close();
+                        _trayTooltipWindow = null;
+                        Close();
+                    }
+                    break;
+                case 11: // 推迟8分钟
+                    {
+                        _eyeshadeModule?.Defer(TimeSpan.FromMinutes(8));
+                    }
+                    break;
+                case 12: // 推迟15分钟
+                    {
+                        _eyeshadeModule?.Defer(TimeSpan.FromMinutes(15));
+                    }
+                    break;
+                case 13: // 推迟30分钟
+                    {
+                        _eyeshadeModule?.Defer(TimeSpan.FromMinutes(30));
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 

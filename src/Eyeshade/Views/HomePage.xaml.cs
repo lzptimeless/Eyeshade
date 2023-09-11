@@ -46,12 +46,16 @@ namespace Eyeshade.Views
                 {
                     if (_eyeshadeModule != null)
                     {
+                        _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
+                        _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
                     }
                     _eyeshadeModule = value;
                     if (_eyeshadeModule != null)
                     {
+                        _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
+                        _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
                     }
                 }
             }
@@ -84,7 +88,9 @@ namespace Eyeshade.Views
 
             if (_eyeshadeModule != null)
             {
+                _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                 _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
+                _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
             }
         }
 
@@ -97,6 +103,28 @@ namespace Eyeshade.Views
                 {
                     ReadData();
                 }
+            }
+        }
+
+        private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
+        {
+            if (_isWindowVisible)
+            {
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    ReadData();
+                });
+            }
+        }
+
+        private void EyeshadeModule_StateChanged(object? sender, EventArgs e)
+        {
+            if (_isWindowVisible)
+            {
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    ReadData();
+                });
             }
         }
 
@@ -189,7 +217,6 @@ namespace Eyeshade.Views
             {
                 module.Pause();
             }
-            ReadData();
         }
 
         private void WorkOrRestCommand_ExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
@@ -200,12 +227,10 @@ namespace Eyeshade.Views
             if (module.State == EyeshadeStates.Work)
             {
                 module.Rest();
-                ReadData();
             }
             else
             {
                 module.Work();
-                ReadData();
             }
         }
     }

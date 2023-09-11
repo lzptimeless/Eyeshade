@@ -12,6 +12,7 @@ GetWindowThreadProcessId
 IsIconic
 IsZoomed
 LoadImage
+ModifyMenu
 RegisterSuspendResumeNotification
 RemoveWindowSubclass
 SetFocus

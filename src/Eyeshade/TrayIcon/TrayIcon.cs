@@ -146,6 +146,36 @@ namespace Eyeshade.TrayIcon
             return _popupMenu.AddMenuItem(id, content);
         }
 
+        public bool AddSubMenu(int subMenuId, string content)
+        {
+            if (_popupMenu == null)
+            {
+                _popupMenu = new Win32PopupMenu();
+            }
+
+            return _popupMenu.AddSubMenu(subMenuId, content);
+        }
+
+        public bool AddSubMenuItem(int subMenuId, int id, string content)
+        {
+            if (_popupMenu == null)
+            {
+                _popupMenu = new Win32PopupMenu();
+            }
+
+            return _popupMenu.AddSubMenuItem(subMenuId, id, content);
+        }
+
+        public bool SetMenuItem(int id, string content)
+        {
+            if (_popupMenu == null)
+            {
+                _popupMenu = new Win32PopupMenu();
+            }
+
+            return _popupMenu.SetMenuItem(id, content);
+        }
+
         public void Close()
         {
             if (!_isShow) return;
@@ -304,7 +334,8 @@ namespace Eyeshade.TrayIcon
     class Win32PopupMenu : IDisposable
     {
         private Windows.Win32.UI.WindowsAndMessaging.HMENU _hMenu;
-        private readonly List<int> _menuItemIds = new List<int>();
+        private readonly Dictionary<int, Windows.Win32.UI.WindowsAndMessaging.HMENU> _menuItemIds = new Dictionary<int, Windows.Win32.UI.WindowsAndMessaging.HMENU>();
+        private readonly Dictionary<int, Windows.Win32.UI.WindowsAndMessaging.HMENU> _subMenus = new Dictionary<int, Windows.Win32.UI.WindowsAndMessaging.HMENU>();
 
         public Win32PopupMenu()
         {
@@ -328,16 +359,71 @@ namespace Eyeshade.TrayIcon
                 var result = PInvoke.AppendMenu(_hMenu, Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_STRING, new UIntPtr((uint)id), lpNewItemLocal);
                 if (result)
                 {
-                    _menuItemIds.Add(id);
+                    _menuItemIds.Add(id, _hMenu);
                 }
 
                 return result;
             }
         }
 
+        public unsafe bool AddSubMenu(int subMenuId, string content)
+        {
+            var hSubMenu = PInvoke.CreatePopupMenu();
+            if (hSubMenu.IsNull)
+            {
+                return false;
+            }
+
+            fixed (char* lpNewItemLocal = content)
+            {
+                var result = PInvoke.AppendMenu(_hMenu,
+                    Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_POPUP | Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_STRING,
+                    (uint)hSubMenu.Value, lpNewItemLocal);
+                if (result)
+                {
+                    _subMenus.Add(subMenuId, hSubMenu);
+                }
+                else
+                {
+                    PInvoke.DestroyMenu(hSubMenu);
+                }
+
+                return result;
+            }
+        }
+
+        public unsafe bool AddSubMenuItem(int subMenuId, int id, string content)
+        {
+            if (!_subMenus.TryGetValue(subMenuId, out var hSubMenu)) return false;
+
+            fixed (char* lpNewItemLocal = content)
+            {
+                var result = PInvoke.AppendMenu(hSubMenu, Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_STRING, new UIntPtr((uint)id), lpNewItemLocal);
+                if (result)
+                {
+                    _menuItemIds.Add(id, hSubMenu);
+                }
+
+                return result;
+            }
+        }
+
+        public unsafe bool SetMenuItem(int id, string content)
+        {
+            if (!_menuItemIds.TryGetValue(id, out var hMenu)) return false;
+
+            fixed (char* lpNewItemLocal = content)
+            {
+                var result = PInvoke.ModifyMenu(hMenu, (uint)id,
+                    Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_BYCOMMAND | Windows.Win32.UI.WindowsAndMessaging.MENU_ITEM_FLAGS.MF_STRING,
+                    (uint)id, lpNewItemLocal);
+                return result;
+            }
+        }
+
         public bool ContainsMenuItemId(int id)
         {
-            return _menuItemIds.Contains(id);
+            return _menuItemIds.ContainsKey(id);
         }
 
         public void Dispose()

@@ -101,7 +101,7 @@ namespace Eyeshade.FuncModule
             if (_isPaused)
             {
                 _isPaused = false;
-                IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(false));
+                IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -157,7 +157,7 @@ namespace Eyeshade.FuncModule
 
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
             _isPaused = true;
-            IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(true));
+            IsPausedChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
 
@@ -170,7 +170,7 @@ namespace Eyeshade.FuncModule
 
             _timer.Change(TimerPeriod, TimerPeriod);
             _isPaused = false;
-            IsPausedChanged?.Invoke(this, new EyeshadeIsPausedChangedArgs(false));
+            IsPausedChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
 
