@@ -159,6 +159,7 @@ namespace Eyeshade
                 }
 
                 double volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
+                (_mediaPlayer.Source as IDisposable)?.Dispose(); // 释放旧的音效
                 _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\school-chime.mp3"), UriKind.Absolute));
                 _mediaPlayer.Volume = volume;
                 _mediaPlayer.Play();
@@ -172,6 +173,7 @@ namespace Eyeshade
 
             var currentProgress = module.Progress;
             var remainningMilliseconds = module.RemainingMilliseconds;
+            double volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
             if (module.State == EyeshadeStates.Work)
             {
                 if ((int)(_eyeshadePreProgress / 0.25) != (int)(currentProgress / 0.25))
@@ -186,6 +188,11 @@ namespace Eyeshade
                     DispatcherQueue?.TryEnqueue(() =>
                     {
                         ShowNearToTrayIcon();
+                        // 播放提示音
+                        (_mediaPlayer.Source as IDisposable)?.Dispose(); // 释放旧的音效
+                        _mediaPlayer.Source = MediaSource.CreateFromUri(new Uri(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"Medias\stopwatch2.mp3"), UriKind.Absolute));
+                        _mediaPlayer.Volume = volume;
+                        _mediaPlayer.Play();
                     });
                 }
             }
