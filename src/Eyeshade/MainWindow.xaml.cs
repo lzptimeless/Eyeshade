@@ -202,7 +202,7 @@ namespace Eyeshade
                     if (timespan.Hours > 0) tooltip.Append($"{timespan.Hours}小时");
 
                     tooltip.Append($"{timespan.Minutes}分");
-                    _trayIcon.SetTooltip($"剩余时间 {timespan}");
+                    _trayIcon.SetTooltip($"剩余时间 {tooltip}");
                 }
             }
             else if (remainningMilliseconds > 10000)
