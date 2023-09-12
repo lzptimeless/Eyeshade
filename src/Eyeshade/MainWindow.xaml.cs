@@ -262,7 +262,7 @@ namespace Eyeshade
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, trayIcon);
         }
 
-        private unsafe void ShowRestingWindow()
+        private void ShowRestingWindow()
         {
             if (AppWindow == null) return;
 
@@ -279,31 +279,8 @@ namespace Eyeshade
                 AppWindow.Show();
             }
 
-            // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
-            // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
-            // When a window that isn't part of the foreground process tries
-            // to use SetWindowPos with HWND_TOP, Windows will not allow the
-            // window to appear on top of the foreground window
-
-            // 因为2000/XP改变了SetForegroundWindow的执行方式，不允许随便把窗口提前，
-            // 打扰用户的工作。可以用附加本线程到最前面窗口的线程，从而欺骗windows。
-            var hWndForeground = PInvoke.GetForegroundWindow();
-            var foregourndThreadId = PInvoke.GetWindowThreadProcessId(hWndForeground, null);
-            var currentThreadId = PInvoke.GetCurrentThreadId();
-            if (foregourndThreadId != currentThreadId)
-            {
-                if (foregourndThreadId != 0 && currentThreadId != 0)
-                {
-                    PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new BOOL(true));
-                }
-                PInvoke.SetForegroundWindow(new HWND(_hWnd));
-                PInvoke.SetFocus(new HWND(_hWnd));
-                AppWindow.MoveInZOrderAtTop();
-                if (foregourndThreadId != 0 && currentThreadId != 0)
-                {
-                    PInvoke.AttachThreadInput(foregourndThreadId, currentThreadId, new BOOL(false));
-                }
-            }
+            ForceForegroundThisWindow();
+            NavigateToHome();
         }
 
         private void CloseRestingWindow()
@@ -399,7 +376,7 @@ namespace Eyeshade
         /// <summary>
         /// 在托盘附近显示窗口
         /// </summary>
-        private unsafe void ShowNearToTrayIcon()
+        private void ShowNearToTrayIcon()
         {
             if (AppWindow == null) return;
 
@@ -423,6 +400,14 @@ namespace Eyeshade
                 AppWindow.Show();
             }
 
+            ForceForegroundThisWindow();
+        }
+
+        /// <summary>
+        /// 强制激活并将窗口设置到顶层
+        /// </summary>
+        private unsafe void ForceForegroundThisWindow()
+        {
             // https://github.com/microsoft/microsoft-ui-xaml/issues/8562
             // MoveInZOrderAtTop/SetWindowPos does not activate a window. 
             // When a window that isn't part of the foreground process tries
