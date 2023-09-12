@@ -175,18 +175,20 @@ namespace Eyeshade
 
             var currentProgress = module.Progress;
             var remainningMilliseconds = module.RemainingMilliseconds;
-            double volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
             if (module.State == EyeshadeStates.Work)
             {
+                var volume = Math.Min(1, Math.Max(0, module.RingerVolume / 100d));
+                var notifyTimeMilliseconds = module.NotifyTime.TotalMilliseconds;
+
                 if ((int)(_eyeshadePreProgress / 0.25) != (int)(currentProgress / 0.25))
                 {
                     // 进度相差了1/4，需要更新托盘图标
                     _trayIcon.SetIcon(GetCurrentStateTrayIcon());
                 }
 
-                if (_eyeshadePreRemainingMilliseconds > 10000 && remainningMilliseconds <= 10000)
+                if (_eyeshadePreRemainingMilliseconds > notifyTimeMilliseconds && remainningMilliseconds <= notifyTimeMilliseconds)
                 {
-                    // 最后工作倒计时最后十秒显示主窗口
+                    // 工作时间结束倒计时显示主窗口
                     DispatcherQueue?.TryEnqueue(() =>
                     {
                         ShowNearToTrayIcon();
@@ -203,7 +205,6 @@ namespace Eyeshade
             // 更新托盘tooltip提示
             if (_trayIcon.IsPointerHover)
             {
-                // 大于1分钟则每分钟更新一次
                 var timespan = TimeSpan.FromMilliseconds(remainningMilliseconds);
                 _trayIcon.SetTooltip($"剩余时间 {timespan:g}");
             }

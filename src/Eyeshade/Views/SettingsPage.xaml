@@ -18,6 +18,9 @@
                             SelectedTime="{x:Bind Data.WorkTime, Mode=TwoWay}"/>
                 <TimePicker Header="休息时长（时：分）" ClockIdentifier="24HourClock" Margin="0,20,0,0" 
                             SelectedTime="{x:Bind Data.RestingTime, Mode=TwoWay}"/>
+                <NumberBox Header="工作即将结束提醒时长（秒）" Margin="0,20,0,0" SmallChange="10" LargeChange="60" SpinButtonPlacementMode="Inline"
+                           MinWidth="242" HorizontalAlignment="Left"
+                           Value="{x:Bind Data.NotifyTimeSeconds, Mode=TwoWay}"/>
                 <Grid Margin="0,20,0,0" MinWidth="242" HorizontalAlignment="Left">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition/>

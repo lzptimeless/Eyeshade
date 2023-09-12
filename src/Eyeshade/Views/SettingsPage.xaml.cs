@@ -77,6 +77,7 @@ namespace Eyeshade.Views
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
+            (_mediaPlayer?.Source as IDisposable)?.Dispose();
             _mediaPlayer?.Dispose();
         }
 
@@ -190,6 +191,18 @@ namespace Eyeshade.Views
                 if (EyeshadeModule != null && value >= TimeSpan.FromMinutes(1) && value != EyeshadeModule.RestingTime)
                 {
                     EyeshadeModule.SetRestingTime(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public int NotifyTimeSeconds
+        {
+            get { return EyeshadeModule != null ? (int)EyeshadeModule.NotifyTime.TotalSeconds : 0; }
+            set
+            {
+                if (EyeshadeModule != null && value >= 1 && value != (int)EyeshadeModule.NotifyTime.TotalSeconds)
+                {
+                    EyeshadeModule.SetNotifyTime(TimeSpan.FromSeconds(value));
                     OnPropertyChanged();
                 }
             }

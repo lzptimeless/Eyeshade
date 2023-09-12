@@ -38,6 +38,7 @@ namespace Eyeshade.FuncModule
         #region properties
         public TimeSpan WorkTime => _userConfig.WorkTime;
         public TimeSpan RestingTime => _userConfig.RestingTime;
+        public TimeSpan NotifyTime => _userConfig.NotifyTime;
         public int RingerVolume => _userConfig.RingerVolume;
         public int TotalMilliseconds => _timer.TotalTime;
         public int RemainingMilliseconds => _timer.RemainingTime;
@@ -117,6 +118,16 @@ namespace Eyeshade.FuncModule
             {
                 _timer.Change((int)value.TotalMilliseconds);
             }
+        }
+
+        public void SetNotifyTime(TimeSpan value)
+        {
+            if (value.TotalSeconds < 1) throw new ArgumentOutOfRangeException(nameof(value), "Must >= second");
+            if (_userConfig.NotifyTime == value) return;
+
+            _logger?.Info($"Set NotifyTime {value}");
+            _userConfig.NotifyTime = value;
+            _userConfig.Save();
         }
 
         public void SetRingerVolume(int value)
