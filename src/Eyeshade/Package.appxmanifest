@@ -11,7 +11,7 @@
   <Identity
     Name="64432LZP.Eyeshade"
     Publisher="CN=45F3959F-7D3A-4AEA-BBAA-DC2BE00599E5"
-    Version="1.0.4.0" />
+    Version="1.0.5.0" />
 
   <mp:PhoneIdentity PhoneProductId="5f5f2b72-70d9-4bd4-8b2f-8e75cbce7a0a" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
