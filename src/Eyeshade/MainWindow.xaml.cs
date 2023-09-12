@@ -28,6 +28,7 @@ using Windows.UI.ViewManagement;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using System.Text;
+using System.Globalization;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -200,32 +201,11 @@ namespace Eyeshade
             }
 
             // 更新托盘tooltip提示
-            if (remainningMilliseconds > 60000)
+            if (_trayIcon.IsPointerHover)
             {
                 // 大于1分钟则每分钟更新一次
-                if (_eyeshadePreRemainingMilliseconds / 60000 != remainningMilliseconds / 60000)
-                {
-                    var timespan = TimeSpan.FromMilliseconds(remainningMilliseconds);
-                    StringBuilder tooltip = new StringBuilder();
-                    if (timespan.Days > 0) tooltip.Append($"{timespan.Days}天");
-                    if (timespan.Hours > 0) tooltip.Append($"{timespan.Hours}小时");
-
-                    tooltip.Append($"{timespan.Minutes}分钟");
-                    _trayIcon.SetTooltip($"剩余时间 {tooltip}");
-                }
-            }
-            else if (remainningMilliseconds > 10000)
-            {
-                // 大于10秒小于1分钟则每5秒更新一次
-                if (_eyeshadePreRemainingMilliseconds / 5000 != remainningMilliseconds / 5000)
-                {
-                    _trayIcon.SetTooltip($"剩余时间 {remainningMilliseconds / 1000}秒");
-                }
-            }
-            else
-            {
-                // 小于10秒则每秒更新一次
-                _trayIcon.SetTooltip($"剩余时间 {remainningMilliseconds / 1000}秒");
+                var timespan = TimeSpan.FromMilliseconds(remainningMilliseconds);
+                _trayIcon.SetTooltip($"剩余时间 {timespan:g}");
             }
 
             _eyeshadePreProgress = currentProgress;

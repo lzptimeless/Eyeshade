@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -23,6 +24,13 @@ namespace Eyeshade.TrayIcon
         private uint _wmMessageId;
         private Win32PopupMenu? _popupMenu;
         private bool _isShow;
+        private bool _isUseCustomPopup;
+        private readonly Timer _pointerHoverLeaveTimer;
+        private const int PointerHoverLeaveDetectIntervalMilliseconds = 100;
+        private const int PointerHoverTimeoutMilliseconds = 500;
+        private bool _isPointerHoverLeaveDetecting;
+        private bool _isPointerHover;
+        private long _pointerEnterTickMilliseconds;
         #endregion
 
         public TrayIcon(IntPtr hWnd, int id, uint wmMessageId = PInvoke.WM_USER + 1)
@@ -30,7 +38,12 @@ namespace Eyeshade.TrayIcon
             _hWnd = hWnd;
             _uid = (uint)id;
             _wmMessageId = wmMessageId;
+            _pointerHoverLeaveTimer = new Timer(PointerEnterLeaveTimerCallback);
         }
+
+        #region properties
+        public bool IsPointerHover => _isPointerHover;
+        #endregion
 
         #region events
         public event EventHandler? PopupOpen;
@@ -47,6 +60,7 @@ namespace Eyeshade.TrayIcon
             Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS flags = Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE;
             if (!useCustomPopup)
             {
+                _isUseCustomPopup = false;
                 // This option will disable NIN_POPUPOPEN and NIN_POPUPCLOSE message
                 flags |= Windows.Win32.UI.Shell.NOTIFY_ICON_DATA_FLAGS.NIF_SHOWTIP;
             }
@@ -247,6 +261,17 @@ namespace Eyeshade.TrayIcon
                             PopupClose?.Invoke(this, EventArgs.Empty);
                         }
                         break;
+                    case PInvoke.WM_MOUSEMOVE:
+                        {
+                            if (!_isUseCustomPopup && !_isPointerHoverLeaveDetecting)
+                            {
+                                _isPointerHoverLeaveDetecting = true;
+                                _pointerEnterTickMilliseconds = Environment.TickCount64;
+                                _isPointerHover = false;
+                                _pointerHoverLeaveTimer.Change(PointerHoverLeaveDetectIntervalMilliseconds, PointerHoverLeaveDetectIntervalMilliseconds);
+                            }
+                        }
+                        break;
                     default: break;
                 }
             }
@@ -268,7 +293,63 @@ namespace Eyeshade.TrayIcon
                 _popupMenu = null;
             }
 
+            _pointerHoverLeaveTimer.Dispose();
+
             GC.SuppressFinalize(this);
+        }
+        #endregion
+
+        #region private methods
+        private void PointerEnterLeaveTimerCallback(object? state)
+        {
+            Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER id = new Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER()
+            {
+                cbSize = (uint)Marshal.SizeOf<Windows.Win32.UI.Shell.NOTIFYICONIDENTIFIER>(),
+                hWnd = new HWND(_hWnd),
+                uID = _uid,
+                guidItem = Guid.Empty
+            };
+            var hResult = PInvoke.Shell_NotifyIconGetRect(id, out var iconLocation);
+            if (hResult.Succeeded)
+            {
+                if (PInvoke.GetCursorPos(out var cursor))
+                {
+                    var rect = new Windows.Foundation.Rect(iconLocation.X, iconLocation.Y, iconLocation.Width, iconLocation.Height);
+                    if (rect.Contains(new Windows.Foundation.Point(cursor.X, cursor.Y)))
+                    {
+                        if (!_isPointerHover && Environment.TickCount64 - _pointerEnterTickMilliseconds >= PointerHoverTimeoutMilliseconds)
+                        {
+                            // Pointer hover
+                            _isPointerHover = true;
+                            PopupOpen?.Invoke(this, EventArgs.Empty);
+                        }
+                    }
+                    else
+                    {
+                        // Pointer leave
+                        _pointerHoverLeaveTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                        _pointerEnterTickMilliseconds = 0;
+                        _isPointerHoverLeaveDetecting = false;
+                        if (_isPointerHover)
+                        {
+                            PopupClose?.Invoke(this, EventArgs.Empty);
+                        }
+                        _isPointerHover = false;
+                    }
+                }
+            }
+            else
+            {
+                // Pointer leave
+                _pointerHoverLeaveTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                _pointerEnterTickMilliseconds = 0;
+                _isPointerHoverLeaveDetecting = false;
+                if (_isPointerHover)
+                {
+                    PopupClose?.Invoke(this, EventArgs.Empty);
+                }
+                _isPointerHover = false;
+            }
         }
         #endregion
     }
