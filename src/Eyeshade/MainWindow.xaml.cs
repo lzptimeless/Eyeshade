@@ -78,6 +78,7 @@ namespace Eyeshade
             _trayIcon.AddMenuItem(3, "设置");
             _trayIcon.AddMenuItem(4, "退出");
             _trayIcon.Select += TrayIcon_Select;
+            _trayIcon.PopupOpen += TrayIcon_PopupOpen;
             _trayIcon.MenuItemExecute += TrayIcon_MenuItemExecute;
 
             // 用户点击关闭按钮时执行隐藏窗口
@@ -286,6 +287,15 @@ namespace Eyeshade
             {
                 ShowNearToTrayIcon();
             }
+        }
+
+        private void TrayIcon_PopupOpen(object? sender, EventArgs e)
+        {
+            var module = _eyeshadeModule;
+            if (module == null) return;
+
+            var timespan = TimeSpan.FromMilliseconds(module.RemainingMilliseconds);
+            _trayIcon.SetTooltip($"剩余时间 {timespan:g}");
         }
 
         private void TrayIcon_MenuItemExecute(object? sender, TrayIconMenuItemExecuteArgs e)

@@ -27,7 +27,7 @@ namespace Eyeshade.TrayIcon
         private bool _isUseCustomPopup;
         private readonly Timer _pointerHoverLeaveTimer;
         private const int PointerHoverLeaveDetectIntervalMilliseconds = 100;
-        private const int PointerHoverTimeoutMilliseconds = 500;
+        private const int PointerHoverTimeoutMilliseconds = 300;
         private bool _isPointerHoverLeaveDetecting;
         private bool _isPointerHover;
         private long _pointerEnterTickMilliseconds;
