@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.Windows.ApplicationModel.WindowsAppRuntime;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -49,6 +50,16 @@ namespace Eyeshade
             _singleInstanceFeature = new SingleInstanceFeature();
             UnhandledException += App_UnhandledException;
 
+            // Initialize does a status check, and if the status is not Ok it will attempt to get
+            // the WindowsAppRuntime into a good state by deploying packages. Unlike a simple
+            // status check, Initialize can sometimes take several seconds to deploy the packages.
+            var deployResult = DeploymentManager.Initialize();
+            if (deployResult.Status != DeploymentStatus.Ok)
+            {
+                _logWrapper.Error(deployResult.ExtendedError, $"WindowsAppRuntime init failed: {deployResult.Status}");
+                _logWrapper.Flush();
+            }
+
             this.InitializeComponent();
         }
 
@@ -68,7 +79,6 @@ namespace Eyeshade
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             var cmdLine = GetCmdLine(args);
-
             if (this.GetSingleInstanceFeature()?.Register() == false)
             {
                 this.GetSingleInstanceFeature()?.Active(cmdLine);
