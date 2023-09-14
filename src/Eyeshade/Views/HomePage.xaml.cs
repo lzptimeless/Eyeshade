@@ -65,7 +65,7 @@ namespace Eyeshade.Views
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-            var appWindow = (App.Current as App)?.MainWindow?.AppWindow;
+            var appWindow = App.Current.GetMainWindow()?.AppWindow;
             if (appWindow != null)
             {
                 _isWindowVisible = appWindow.IsVisible;
@@ -80,7 +80,7 @@ namespace Eyeshade.Views
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            var appWindow = (App.Current as App)?.MainWindow?.AppWindow;
+            var appWindow = App.Current.GetMainWindow()?.AppWindow;
             if (appWindow != null)
             {
                 appWindow.Changed -= AppWindow_Changed;

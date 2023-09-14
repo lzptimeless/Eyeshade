@@ -1,4 +1,5 @@
 ﻿using Eyeshade.Log;
+using Eyeshade.SingleInstance;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -12,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Foundation;
@@ -33,8 +35,9 @@ namespace Eyeshade
         public static readonly bool IsPackaged = true;
 #endif
 
-        private MainWindow? m_window;
-        private readonly ILogWrapper m_logWrapper;
+        private MainWindow? _window;
+        private readonly ILogWrapper _logWrapper;
+        private readonly SingleInstanceFeature? _singleInstanceFeature;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -42,17 +45,20 @@ namespace Eyeshade
         /// </summary>
         public App()
         {
-            m_logWrapper = new NLogWrapper("log.txt");
+            _logWrapper = new NLogWrapper("log.txt");
+            _singleInstanceFeature = new SingleInstanceFeature();
             UnhandledException += App_UnhandledException;
 
             this.InitializeComponent();
         }
 
-        public Window? MainWindow => m_window;
+        public Window? MainWindow => _window;
+        internal SingleInstanceFeature? SingleInstanceFeature => _singleInstanceFeature;
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
-            m_logWrapper.Error(e.Exception, "App crashed.");
+            _logWrapper.Error(e.Exception, "App crashed.");
+            _logWrapper.Flush();
         }
 
         /// <summary>
@@ -61,19 +67,62 @@ namespace Eyeshade
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow(m_logWrapper);
-            var cmd = Environment.GetCommandLineArgs();
+            var cmdLine = GetCmdLine(args);
 
-            if (args.Arguments?.Contains("--start-with-system") == true || // Unpackaged mode
-                cmd?.Contains("--start-with-system") == true || // Unpackaged mode
+            if (this.GetSingleInstanceFeature()?.Register() == false)
+            {
+                this.GetSingleInstanceFeature()?.Active(cmdLine);
+                Exit();
+                return;
+            }
+
+            _window = new MainWindow(_logWrapper);
+            if (cmdLine?.Contains("--start-with-system") == true || // Unpackaged mode
                 args.UWPLaunchActivatedEventArgs.Kind == ActivationKind.StartupTask) // Packaged mode
             {
-                m_window.ShowHide();
+                _window.ShowHide();
             }
             else
             {
-                m_window.ShowNormal();
+                _window.ShowNormal();
             }
+        }
+
+        private string GetCmdLine(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        {
+            StringBuilder cmdLine = new StringBuilder();
+            var envArgs = Environment.GetCommandLineArgs();
+            if (envArgs != null && envArgs.Length > 0)
+            {
+                cmdLine.Append(string.Join(' ', envArgs));
+            }
+
+            if (!string.IsNullOrEmpty(args.Arguments))
+            {
+                cmdLine.Append(' ');
+                cmdLine.Append(args.Arguments);
+            }
+
+            if (!string.IsNullOrEmpty(args.UWPLaunchActivatedEventArgs?.Arguments))
+            {
+                cmdLine.Append(' ');
+                cmdLine.Append(args.UWPLaunchActivatedEventArgs.Arguments);
+            }
+
+            return cmdLine.ToString();
+        }
+    }
+
+    public static class ApplicationExtension
+    {
+        internal static SingleInstanceFeature? GetSingleInstanceFeature(this Application app)
+        {
+            return ((App)app).SingleInstanceFeature;
+        }
+
+        internal static Window? GetMainWindow(this Application app)
+        {
+            return ((App)app).MainWindow;
         }
     }
 }

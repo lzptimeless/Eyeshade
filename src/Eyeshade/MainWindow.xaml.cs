@@ -29,6 +29,7 @@ using Windows.Win32;
 using Windows.Win32.Foundation;
 using System.Text;
 using System.Globalization;
+using Eyeshade.SingleInstance;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -49,6 +50,7 @@ namespace Eyeshade
         private int _eyeshadePreRemainingMilliseconds = 0;
         private MediaPlayer _mediaPlayer;
         private readonly Windows.Win32.UI.Shell.SUBCLASSPROC _wndProc;
+        private readonly SingleInstanceFeature? _singleInstanceFeature;
         #endregion
 
         public MainWindow()
@@ -90,12 +92,24 @@ namespace Eyeshade
             // 设置窗口消息处理函数
             _wndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
             if (!PInvoke.SetWindowSubclass(new HWND(_hWnd), _wndProc, 0, 0))
+            {
                 throw new Win32Exception();
+            }
 
             // 注册以在系统暂停或恢复时接收通知
             var hPowerNotify = PInvoke.RegisterSuspendResumeNotification(new HANDLE(_hWnd), Windows.Win32.UI.WindowsAndMessaging.REGISTER_NOTIFICATION_FLAGS.DEVICE_NOTIFY_WINDOW_HANDLE);
             if (hPowerNotify.IsNull)
+            {
                 throw new Win32Exception();
+            }
+
+            // 设置单实例激活事件
+            _singleInstanceFeature = App.Current.GetSingleInstanceFeature();
+            if (_singleInstanceFeature != null)
+            {
+                _singleInstanceFeature.InitShowWindowMessage(_hWnd);
+                _singleInstanceFeature.ShowWindow += SingleInstanceFeature_ShowWindow;
+            }
         }
 
         public MainWindow(ILogWrapper logger) : this()
@@ -139,7 +153,14 @@ namespace Eyeshade
             }
 
             _trayIcon.ProcessWindowMessage(hWnd, uMsg, wParam, lParam);
+            _singleInstanceFeature?.ProcessWindowMessage(hWnd, uMsg, wParam, lParam);
+
             return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+
+        private void SingleInstanceFeature_ShowWindow(object? sender, SingleInstance.ShowWindowArgs e)
+        {
+            ShowNearToTrayIcon();
         }
 
         #region EyeshadeModule

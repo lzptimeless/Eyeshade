@@ -1,6 +1,7 @@
 ﻿AppendMenu
 AttachThreadInput
 CalculatePopupWindowPosition
+ChangeWindowMessageFilterEx
 CreatePopupMenu
 DefSubclassProc
 DestroyMenu
@@ -13,7 +14,9 @@ IsIconic
 IsZoomed
 LoadImage
 ModifyMenu
+PostMessage
 RegisterSuspendResumeNotification
+RegisterWindowMessage
 RemoveWindowSubclass
 SetFocus
 SetForegroundWindow
