@@ -15,10 +15,10 @@ namespace Eyeshade.FuncModule
         private readonly ILogWrapper? _logger;
         private readonly string _configFilePath;
 
-        public EyeshadeUserConfig(ILogWrapper? logger)
+        public EyeshadeUserConfig(string userDataFolder, ILogWrapper? logger)
         {
             _logger = logger;
-            _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+            _configFilePath = Path.Combine(userDataFolder, ConfigFileName);
 
             Load();
         }

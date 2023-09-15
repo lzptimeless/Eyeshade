@@ -22,10 +22,10 @@ namespace Eyeshade.FuncModule
         private EyeshadeStates _state;
         #endregion
 
-        public EyeshadeModule(ILogWrapper? logger)
+        public EyeshadeModule(string userDataFolder, ILogWrapper? logger)
         {
             _logger = logger;
-            _userConfig = new EyeshadeUserConfig(logger);
+            _userConfig = new EyeshadeUserConfig(userDataFolder, logger);
             _timer = new CountdownTimer();
             _state = EyeshadeStates.Work;
 

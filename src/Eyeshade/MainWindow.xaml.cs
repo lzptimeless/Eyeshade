@@ -114,8 +114,10 @@ namespace Eyeshade
 
         public MainWindow(ILogWrapper logger) : this()
         {
+            var userDataFoler = App.Current.GetUserDataFolder();
+
             _logger = logger;
-            _eyeshadeModule = new EyeshadeModule(logger);
+            _eyeshadeModule = new EyeshadeModule(userDataFoler, logger);
             _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
             _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
             _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
