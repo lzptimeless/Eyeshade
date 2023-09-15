@@ -35,21 +35,29 @@ namespace Eyeshade
         /// </summary>
         public App()
         {
+            // 初始化数据存放文件夹
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.Create);
             UserDataFolder = Path.Combine(localAppData, AppName);
 
+            // 初始化日志系统
             _logWrapper = new NLogWrapper(Path.Combine(UserDataFolder, "log.txt"));
+            // 创建单实例功能
             _singleInstanceFeature = new SingleInstanceFeature();
+            // 处理程序异常
             UnhandledException += App_UnhandledException;
 
-            // Initialize does a status check, and if the status is not Ok it will attempt to get
-            // the WindowsAppRuntime into a good state by deploying packages. Unlike a simple
-            // status check, Initialize can sometimes take several seconds to deploy the packages.
-            var deployResult = DeploymentManager.Initialize();
-            if (deployResult.Status != DeploymentStatus.Ok)
+            // 处理Unpackaged模式静默安装WindowsAppRuntime，Packaged模式不需要安装WindowsAppRuntime
+            if (!IsPackaged)
             {
-                _logWrapper.Error(deployResult.ExtendedError, $"WindowsAppRuntime init failed: {deployResult.Status}");
-                _logWrapper.Flush();
+                // Initialize does a status check, and if the status is not Ok it will attempt to get
+                // the WindowsAppRuntime into a good state by deploying packages. Unlike a simple
+                // status check, Initialize can sometimes take several seconds to deploy the packages.
+                var deployResult = DeploymentManager.Initialize();
+                if (deployResult.Status != DeploymentStatus.Ok)
+                {
+                    _logWrapper.Error(deployResult.ExtendedError, $"WindowsAppRuntime init failed: {deployResult.Status}");
+                    _logWrapper.Flush();
+                }
             }
 
             this.InitializeComponent();
