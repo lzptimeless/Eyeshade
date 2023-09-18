@@ -26,6 +26,10 @@ Shell_NotifyIconGetRect
 ShowWindow
 SystemParametersInfo
 TrackPopupMenu
+UnregisterSuspendResumeNotification
+WTSRegisterSessionNotification
+WTSUnRegisterSessionNotification
+NOTIFY_FOR_THIS_SESSION
 NOTIFYICON_VERSION_4
 NIN_SELECT
 NIN_POPUPOPEN
@@ -38,3 +42,6 @@ WM_COMMAND
 WM_MOUSEMOVE 
 WM_POWERBROADCAST
 WM_USER
+WM_WTSSESSION_CHANGE
+WTS_SESSION_LOCK
+WTS_SESSION_UNLOCK

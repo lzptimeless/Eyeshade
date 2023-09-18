@@ -51,6 +51,7 @@ namespace Eyeshade
         private MediaPlayer _mediaPlayer;
         private readonly Windows.Win32.UI.Shell.SUBCLASSPROC _wndProc;
         private readonly SingleInstanceFeature? _singleInstanceFeature;
+        private readonly Windows.Win32.System.Power.HPOWERNOTIFY _hPOWERNOTIFY;
         #endregion
 
         public MainWindow()
@@ -85,6 +86,7 @@ namespace Eyeshade
 
             // 用户点击关闭按钮时执行隐藏窗口
             AppWindow.Closing += AppWindow_Closing;
+            AppWindow.Destroying += AppWindow_Destroying;
 
             // 设置音效播放器
             _mediaPlayer = new MediaPlayer();
@@ -92,13 +94,6 @@ namespace Eyeshade
             // 设置窗口消息处理函数
             _wndProc = new Windows.Win32.UI.Shell.SUBCLASSPROC(WndProc);
             if (!PInvoke.SetWindowSubclass(new HWND(_hWnd), _wndProc, 0, 0))
-            {
-                throw new Win32Exception();
-            }
-
-            // 注册以在系统暂停或恢复时接收通知
-            var hPowerNotify = PInvoke.RegisterSuspendResumeNotification(new HANDLE(_hWnd), Windows.Win32.UI.WindowsAndMessaging.REGISTER_NOTIFICATION_FLAGS.DEVICE_NOTIFY_WINDOW_HANDLE);
-            if (hPowerNotify.IsNull)
             {
                 throw new Win32Exception();
             }
@@ -114,9 +109,22 @@ namespace Eyeshade
 
         public MainWindow(ILogWrapper logger) : this()
         {
-            var userDataFoler = App.Current.GetUserDataFolder();
-
             _logger = logger;
+
+            // 注册以在系统暂停或恢复时接收通知
+            _hPOWERNOTIFY = PInvoke.RegisterSuspendResumeNotification(new HANDLE(_hWnd), Windows.Win32.UI.WindowsAndMessaging.REGISTER_NOTIFICATION_FLAGS.DEVICE_NOTIFY_WINDOW_HANDLE);
+            if (_hPOWERNOTIFY.IsNull)
+            {
+                _logger?.Warn("RegisterSuspendResumeNotification failed.");
+            }
+
+            // 注册以在系统锁屏和解锁时接受通知
+            if (!PInvoke.WTSRegisterSessionNotification(new HWND(_hWnd), PInvoke.NOTIFY_FOR_THIS_SESSION))
+            {
+                _logger?.Warn("WTSRegisterSessionNotification");
+            }
+
+            var userDataFoler = App.Current.GetUserDataFolder();
             _eyeshadeModule = new EyeshadeModule(userDataFoler, logger);
             _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
             _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
@@ -145,11 +153,26 @@ namespace Eyeshade
             {
                 if (PInvoke.PBT_APMSUSPEND == wParam)
                 {
+                    _logger?.Info("System suspend.");
                     _eyeshadeModule?.Pause();
                 }
                 else if (PInvoke.PBT_APMRESUMESUSPEND == wParam || // 仅当应用程序在计算机挂起之前收到 PBT_APMSUSPEND 事件时，应用程序才能接收此事件。
                     PInvoke.PBT_APMRESUMECRITICAL == wParam) // 通知应用程序系统已恢复操作。 此事件可以指示部分或所有应用程序未收到 PBT_APMSUSPEND 事件
                 {
+                    _logger?.Info("System resume.");
+                    _eyeshadeModule?.Resume();
+                }
+            }
+            else if (uMsg == PInvoke.WM_WTSSESSION_CHANGE)
+            {
+                if (PInvoke.WTS_SESSION_LOCK == wParam)
+                {
+                    _logger?.Info("Screen lock.");
+                    _eyeshadeModule?.Pause();
+                }
+                else if (PInvoke.WTS_SESSION_UNLOCK == wParam)
+                {
+                    _logger?.Info("Screen unlock.");
                     _eyeshadeModule?.Resume();
                 }
             }
@@ -163,6 +186,17 @@ namespace Eyeshade
         private void SingleInstanceFeature_ShowWindow(object? sender, SingleInstance.ShowWindowArgs e)
         {
             ShowNearToTrayIcon();
+        }
+
+        private void AppWindow_Destroying(Microsoft.UI.Windowing.AppWindow sender, object args)
+        {
+            // 释放资源
+            if (!_hPOWERNOTIFY.IsNull)
+            {
+                PInvoke.UnregisterSuspendResumeNotification(_hPOWERNOTIFY);
+            }
+
+            PInvoke.WTSUnRegisterSessionNotification(new HWND(_hWnd));
         }
 
         #region EyeshadeModule
