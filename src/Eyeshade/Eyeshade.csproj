@@ -24,7 +24,7 @@
 	<AppxBundle>Never</AppxBundle>
 	<GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
 	<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
-	<Version>1.0.8</Version>
+	<Version>1.0.9</Version>
   </PropertyGroup>
 
   <!--Define "IS_NON_PACKAGED" constant if the app is non-packaged app.-->
