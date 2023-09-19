@@ -77,8 +77,8 @@ namespace Eyeshade.Views
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            (_mediaPlayer?.Source as IDisposable)?.Dispose();
-            _mediaPlayer?.Dispose();
+            _mediaPlayer?.Dispose(); // 先释放_mediaPlayer让它停止播放
+            (_mediaPlayer?.Source as IDisposable)?.Dispose(); // 再释放音频文件
         }
 
         private void VolumeSlider_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
@@ -135,7 +135,6 @@ namespace Eyeshade.Views
                         if (isStartWithSystem != _isStartWithSystem)
                         {
                             _isStartWithSystem = isStartWithSystem;
-                            OnPropertyChanged();
                         }
                     }
                 }
@@ -144,9 +143,9 @@ namespace Eyeshade.Views
                     if (_isStartWithSystem != false)
                     {
                         _isStartWithSystem = false;
-                        OnPropertyChanged();
                     }
                 }
+                OnPropertyChanged(null); // Notify all property changed
             }
         }
 
@@ -215,6 +214,18 @@ namespace Eyeshade.Views
                 if (EyeshadeModule != null && value >= 0 && value != EyeshadeModule.RingerVolume)
                 {
                     EyeshadeModule.SetRingerVolume(value);
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public bool AutoPauseWhenUserLeave
+        {
+            get { return EyeshadeModule != null ? EyeshadeModule.AutoPauseWhenUserLeave : false; }
+            set
+            {
+                if (EyeshadeModule != null && value != EyeshadeModule.AutoPauseWhenUserLeave)
+                {
+                    EyeshadeModule.SetAutoPauseWhenUserLeave(value);
                     OnPropertyChanged();
                 }
             }

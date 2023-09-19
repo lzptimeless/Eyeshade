@@ -1,6 +1,7 @@
 ﻿AppendMenu
 AttachThreadInput
 CalculatePopupWindowPosition
+CallNtPowerInformation
 ChangeWindowMessageFilterEx
 CreatePopupMenu
 DefSubclassProc
@@ -9,6 +10,7 @@ GetCursorPos
 GetCurrentThreadId
 GetDpiForWindow
 GetForegroundWindow
+GetLastInputInfo
 GetWindowThreadProcessId
 IsIconic
 IsZoomed
@@ -29,6 +31,7 @@ TrackPopupMenu
 UnregisterSuspendResumeNotification
 WTSRegisterSessionNotification
 WTSUnRegisterSessionNotification
+EXECUTION_STATE
 NOTIFY_FOR_THIS_SESSION
 NOTIFYICON_VERSION_4
 NIN_SELECT

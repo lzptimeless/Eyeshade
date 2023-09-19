@@ -162,7 +162,7 @@ namespace Eyeshade.FuncModule
         }
 
         /// <summary>
-        /// 恢复倒计时，如果没有处于暂停状态或剩余时间等于0则返回false
+        /// 恢复倒计时，如果没有处于暂停状态或剩余时间等于0即计时结束则返回false
         /// </summary>
         public bool Resume()
         {

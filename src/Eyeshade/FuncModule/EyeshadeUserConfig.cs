@@ -39,6 +39,10 @@ namespace Eyeshade.FuncModule
         /// 音效音量
         /// </summary>
         public int RingerVolume { get; set; } = 100;
+        /// <summary>
+        /// 当用户离开电脑时自动暂停，判定条件：用户4分钟内没有任何输入且没有视频或游戏等防止锁屏的进程
+        /// </summary>
+        public bool AutoPauseWhenUserLeave { get; set; } = true;
 
         public void Load()
         {
@@ -83,6 +87,14 @@ namespace Eyeshade.FuncModule
                                 }
                             }
                             break;
+                        case nameof(AutoPauseWhenUserLeave):
+                            {
+                                if (bool.TryParse(itemNode.Value, out var value))
+                                {
+                                    AutoPauseWhenUserLeave = value;
+                                }
+                            }
+                            break;
                         default:
                             break;
                     }
@@ -103,7 +115,8 @@ namespace Eyeshade.FuncModule
                     new XElement(nameof(WorkTime), WorkTime.ToString()),
                     new XElement(nameof(RestingTime), RestingTime.ToString()),
                     new XElement(nameof(NotifyTime), NotifyTime.ToString()),
-                    new XElement(nameof(RingerVolume), RingerVolume.ToString())
+                    new XElement(nameof(RingerVolume), RingerVolume.ToString()),
+                    new XElement(nameof(AutoPauseWhenUserLeave), AutoPauseWhenUserLeave.ToString())
                 ));
 
                 xdoc.Save(_configFilePath);

@@ -76,7 +76,7 @@
                         </MenuFlyout>
                     </AppBarButton.Flyout>
                 </AppBarButton>
-                <AppBarToggleButton Command="{StaticResource PauseOrResumeCommand}" IsChecked="{x:Bind Data.IsPaused, Mode=OneWay}"/>
+                <AppBarToggleButton Command="{StaticResource PauseOrResumeCommand}" IsChecked="{x:Bind Data.IsUserPaused, Mode=OneWay}"/>
                 <AppBarToggleButton Command="{StaticResource WorkOrRestCommand}" IsChecked="{x:Bind Data.IsResting, Mode=OneWay}"/>
             </CommandBar>
         </StackPanel>

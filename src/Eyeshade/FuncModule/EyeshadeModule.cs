@@ -19,7 +19,18 @@ namespace Eyeshade.FuncModule
         private readonly ILogWrapper? _logger;
         private readonly EyeshadeUserConfig _userConfig;
         private readonly CountdownTimer _timer;
+        /// <summary>
+        /// 当前状态是工作还是休息
+        /// </summary>
         private EyeshadeStates _state;
+        /// <summary>
+        /// 用户是否已请求暂停计时，即调用UserPause()
+        /// </summary>
+        private bool _isUserPaused;
+        /// <summary>
+        /// 是否已智能暂停计时，即调用SmartPause()
+        /// </summary>
+        private bool _isSmartPaused;
         #endregion
 
         public EyeshadeModule(string userDataFolder, ILogWrapper? logger)
@@ -31,7 +42,6 @@ namespace Eyeshade.FuncModule
 
             _timer.Completed += Countdown_Completed;
             _timer.ProgressChanged += Countdown_ProgressChanged;
-            _timer.IsPausedChanged += Countdown_IsPausedChanged;
             _timer.Reset((int)_userConfig.WorkTime.TotalMilliseconds);
         }
 
@@ -40,17 +50,19 @@ namespace Eyeshade.FuncModule
         public TimeSpan RestingTime => _userConfig.RestingTime;
         public TimeSpan NotifyTime => _userConfig.NotifyTime;
         public int RingerVolume => _userConfig.RingerVolume;
+        public bool AutoPauseWhenUserLeave => _userConfig.AutoPauseWhenUserLeave;
         public int TotalMilliseconds => _timer.TotalTime;
         public int RemainingMilliseconds => _timer.RemainingTime;
         public double Progress => _timer.Progress;
-        public bool IsPaused => _timer.IsPaused;
+        public bool IsUserPaused => _isUserPaused;
+        public bool IsSmartPaused => _isSmartPaused;
         public EyeshadeStates State => _state;
         #endregion
 
         #region events
         public event EventHandler? StateChanged;
         public event EventHandler? ProgressChanged;
-        public event EventHandler? IsPausedChanged;
+        public event EventHandler? IsUserPausedChanged;
         #endregion
 
         #region public methods
@@ -78,18 +90,62 @@ namespace Eyeshade.FuncModule
             _timer.Defer((int)value.TotalMilliseconds);
         }
 
-        public void Pause()
+        public void UserPause()
         {
-            _logger?.Info($"Pause, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            var result = _timer.Pause();
-            _logger?.Info($"Pause result: {result}");
+            _logger?.Info($"User pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (!_isUserPaused)
+            {
+                _isUserPaused = true;
+                if (!_timer.IsPaused)
+                {
+                    var result = _timer.Pause();
+                    _logger?.Info($"Pause timer, result: {result}");
+                }
+                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
-        public void Resume()
+        public void UserResume()
         {
-            _logger?.Info($"Resume, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            var result = _timer.Resume();
-            _logger?.Info($"Resume result: {result}");
+            _logger?.Info($"User resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (_isUserPaused)
+            {
+                _isUserPaused = false;
+                if (!_isSmartPaused)
+                {
+                    var result = _timer.Resume();
+                    _logger?.Info($"Resume timer, result: {result}");
+                }
+                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        public void SmartPause()
+        {
+            _logger?.Info($"Smart pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (!_isSmartPaused)
+            {
+                _isSmartPaused = true;
+                if (!_timer.IsPaused)
+                {
+                    var result = _timer.Pause();
+                    _logger?.Info($"Pause timer, result: {result}");
+                }
+            }
+        }
+
+        public void SmartResume()
+        {
+            _logger?.Info($"Smart resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (_isSmartPaused)
+            {
+                _isSmartPaused = false;
+                if (!_isUserPaused)
+                {
+                    var result = _timer.Resume();
+                    _logger?.Info($"Resume timer, result: {result}");
+                }
+            }
         }
 
         public void SetWorkTime(TimeSpan value)
@@ -138,6 +194,14 @@ namespace Eyeshade.FuncModule
             _userConfig.Save();
         }
 
+        public void SetAutoPauseWhenUserLeave(bool value)
+        {
+            if (_userConfig.AutoPauseWhenUserLeave == value) return;
+
+            _userConfig.AutoPauseWhenUserLeave = value;
+            _userConfig.Save();
+        }
+
         public bool GetIsStartWithSystem()
         {
             var launcher = Assembly.GetEntryAssembly()?.Location;
@@ -181,11 +245,6 @@ namespace Eyeshade.FuncModule
             {
                 Work();
             }
-        }
-
-        private void Countdown_IsPausedChanged(object? sender, EventArgs e)
-        {
-            IsPausedChanged?.Invoke(this, e);
         }
 
         private void Countdown_ProgressChanged(object? sender, EventArgs e)

@@ -48,14 +48,14 @@ namespace Eyeshade.Views
                     {
                         _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
-                        _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsUserPausedChanged -= EyeshadeModule_IsPausedChanged;
                     }
                     _eyeshadeModule = value;
                     if (_eyeshadeModule != null)
                     {
                         _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
-                        _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsUserPausedChanged += EyeshadeModule_IsPausedChanged;
                     }
                 }
             }
@@ -90,7 +90,7 @@ namespace Eyeshade.Views
             {
                 _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                 _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
-                _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
+                _eyeshadeModule.IsUserPausedChanged -= EyeshadeModule_IsPausedChanged;
             }
         }
 
@@ -149,10 +149,10 @@ namespace Eyeshade.Views
 
             Data.RemainingMilliseconds = module.RemainingMilliseconds;
             Data.CountdownProgressValue = Math.Min(100, Math.Max(0, (int)(100 * module.Progress)));
-            Data.IsPaused = module.IsPaused;
+            Data.IsUserPaused = module.IsUserPaused;
             Data.EyeshadeState = module.State;
 
-            if (module.IsPaused)
+            if (module.IsUserPaused)
             {
                 if (PauseOrResumeCommand.Label != "恢复")
                 {
@@ -209,13 +209,13 @@ namespace Eyeshade.Views
             var module = EyeshadeModule;
             if (module == null) return;
 
-            if (module.IsPaused)
+            if (module.IsUserPaused)
             {
-                module.Resume();
+                module.UserResume();
             }
             else
             {
-                module.Pause();
+                module.UserPause();
             }
         }
 
@@ -294,15 +294,15 @@ namespace Eyeshade.Views
             }
         }
 
-        private bool _isPaused;
-        public bool IsPaused
+        private bool _isUserPaused;
+        public bool IsUserPaused
         {
-            get { return _isPaused; }
+            get { return _isUserPaused; }
             set
             {
-                if (_isPaused != value)
+                if (_isUserPaused != value)
                 {
-                    _isPaused = value;
+                    _isUserPaused = value;
                     OnPropertyChanged();
                 }
             }

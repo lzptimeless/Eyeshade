@@ -30,6 +30,7 @@ using Windows.Win32.Foundation;
 using System.Text;
 using System.Globalization;
 using Eyeshade.SingleInstance;
+using Eyeshade.UserActivity;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -52,6 +53,10 @@ namespace Eyeshade
         private readonly Windows.Win32.UI.Shell.SUBCLASSPROC _wndProc;
         private readonly SingleInstanceFeature? _singleInstanceFeature;
         private readonly Windows.Win32.System.Power.HPOWERNOTIFY _hPOWERNOTIFY;
+        private readonly UserActivityMonitor _userActivityMonitor;
+        private bool _isSystemSuspended;
+        private bool _isScreenLocked;
+        private bool _isUserLeaved;
         #endregion
 
         public MainWindow()
@@ -105,6 +110,12 @@ namespace Eyeshade
                 _singleInstanceFeature.InitShowWindowMessage(_hWnd);
                 _singleInstanceFeature.ShowWindow += SingleInstanceFeature_ShowWindow;
             }
+
+            // 监控用户是否离开
+            _userActivityMonitor = new UserActivityMonitor();
+            _userActivityMonitor.UserLeave += UserActivityMonitor_UserLeave;
+            _userActivityMonitor.UserBack += UserActivityMonitor_UserBack;
+            _userActivityMonitor.Start();
         }
 
         public MainWindow(ILogWrapper logger) : this()
@@ -127,7 +138,7 @@ namespace Eyeshade
             var userDataFoler = App.Current.GetUserDataFolder();
             _eyeshadeModule = new EyeshadeModule(userDataFoler, logger);
             _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
-            _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
+            _eyeshadeModule.IsUserPausedChanged += EyeshadeModule_IsUserPausedChanged;
             _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
         }
 
@@ -154,13 +165,15 @@ namespace Eyeshade
                 if (PInvoke.PBT_APMSUSPEND == wParam)
                 {
                     _logger?.Info("System suspend.");
-                    _eyeshadeModule?.Pause();
+                    _isSystemSuspended = true;
+                    SmartPauseOrResume();
                 }
                 else if (PInvoke.PBT_APMRESUMESUSPEND == wParam || // 仅当应用程序在计算机挂起之前收到 PBT_APMSUSPEND 事件时，应用程序才能接收此事件。
                     PInvoke.PBT_APMRESUMECRITICAL == wParam) // 通知应用程序系统已恢复操作。 此事件可以指示部分或所有应用程序未收到 PBT_APMSUSPEND 事件
                 {
                     _logger?.Info("System resume.");
-                    _eyeshadeModule?.Resume();
+                    _isSystemSuspended = false;
+                    SmartPauseOrResume();
                 }
             }
             else if (uMsg == PInvoke.WM_WTSSESSION_CHANGE)
@@ -168,12 +181,14 @@ namespace Eyeshade
                 if (PInvoke.WTS_SESSION_LOCK == wParam)
                 {
                     _logger?.Info("Screen lock.");
-                    _eyeshadeModule?.Pause();
+                    _isScreenLocked = true;
+                    SmartPauseOrResume();
                 }
                 else if (PInvoke.WTS_SESSION_UNLOCK == wParam)
                 {
                     _logger?.Info("Screen unlock.");
-                    _eyeshadeModule?.Resume();
+                    _isScreenLocked = false;
+                    SmartPauseOrResume();
                 }
             }
 
@@ -181,6 +196,44 @@ namespace Eyeshade
             _singleInstanceFeature?.ProcessWindowMessage(hWnd, uMsg, wParam, lParam);
 
             return PInvoke.DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        }
+
+        private void UserActivityMonitor_UserLeave(object? sender, UserLeaveArgs e)
+        {
+            if (!e.IsSystemDisplayRequired)
+            {
+                _logger?.Info("User leave.");
+                _isUserLeaved = true;
+                SmartPauseOrResume();
+            }
+        }
+
+        private void UserActivityMonitor_UserBack(object? sender, EventArgs e)
+        {
+            if (_isUserLeaved)
+            {
+                _logger?.Info("User back.");
+                _isUserLeaved = false;
+                SmartPauseOrResume();
+            }
+        }
+
+        private void SmartPauseOrResume()
+        {
+            var module = _eyeshadeModule;
+            if (module == null) return;
+
+            if (_isSystemSuspended || _isScreenLocked || (_isUserLeaved && module.AutoPauseWhenUserLeave))
+            {
+                module.SmartPause();
+            }
+            else
+            {
+                if (module.IsSmartPaused)
+                {
+                    module.SmartResume();
+                }
+            }
         }
 
         private void SingleInstanceFeature_ShowWindow(object? sender, SingleInstance.ShowWindowArgs e)
@@ -197,6 +250,11 @@ namespace Eyeshade
             }
 
             PInvoke.WTSUnRegisterSessionNotification(new HWND(_hWnd));
+            _userActivityMonitor.Dispose();
+            _trayIcon.Dispose();
+
+            _mediaPlayer.Dispose(); // 先释放_mediaPlayer让它停止播放
+            (_mediaPlayer.Source as IDisposable)?.Dispose(); // 再释放音频文件
         }
 
         #region EyeshadeModule
@@ -271,12 +329,12 @@ namespace Eyeshade
             _eyeshadePreRemainingMilliseconds = remainningMilliseconds;
         }
 
-        private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
+        private void EyeshadeModule_IsUserPausedChanged(object? sender, EventArgs e)
         {
             var module = _eyeshadeModule;
             if (module != null)
             {
-                _trayIcon.SetMenuItem(1, module.IsPaused ? "恢复" : "暂停");
+                _trayIcon.SetMenuItem(1, module.IsUserPaused ? "恢复" : "暂停");
             }
 
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
@@ -290,7 +348,7 @@ namespace Eyeshade
             {
                 var progress = module.Progress;
 
-                if (module.IsPaused) trayIcon = @"Images\TrayIcon\pause.ico";
+                if (module.IsUserPaused) trayIcon = @"Images\TrayIcon\pause.ico";
                 else if (module.State == EyeshadeStates.Resting) trayIcon = @"Images\TrayIcon\resting.ico";
                 else if (progress > 0.75) trayIcon = @"Images\TrayIcon\100.ico";
                 else if (progress > 0.5) trayIcon = @"Images\TrayIcon\75.ico";
@@ -364,13 +422,13 @@ namespace Eyeshade
                         var module = _eyeshadeModule;
                         if (module != null)
                         {
-                            if (module.IsPaused)
+                            if (module.IsUserPaused)
                             {
-                                module.Resume();
+                                module.UserResume();
                             }
                             else
                             {
-                                module.Pause();
+                                module.UserPause();
                             }
                         }
                     }
