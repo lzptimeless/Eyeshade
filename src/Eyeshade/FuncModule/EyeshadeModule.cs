@@ -75,6 +75,15 @@ namespace Eyeshade.FuncModule
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        public void WorkPause()
+        {
+            var workTime = _userConfig.WorkTime;
+            _logger?.Info($"WorkPause {workTime}");
+            _timer.Reset((int)workTime.TotalMilliseconds, forcePause: true);
+            _state = EyeshadeStates.Work;
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         public void Rest()
         {
             var restingTime = _userConfig.RestingTime;
@@ -92,7 +101,7 @@ namespace Eyeshade.FuncModule
 
         public void UserPause()
         {
-            _logger?.Info($"User pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            _logger?.Info($"User pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
             if (!_isUserPaused)
             {
                 _isUserPaused = true;
@@ -107,7 +116,7 @@ namespace Eyeshade.FuncModule
 
         public void UserResume()
         {
-            _logger?.Info($"User resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            _logger?.Info($"User resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
             if (_isUserPaused)
             {
                 _isUserPaused = false;
@@ -122,12 +131,13 @@ namespace Eyeshade.FuncModule
 
         public void SmartPause()
         {
-            _logger?.Info($"Smart pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            _logger?.Info($"Smart pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
             if (!_isSmartPaused)
             {
                 _isSmartPaused = true;
-                if (!_timer.IsPaused)
+                if (!_timer.IsPaused && _state == EyeshadeStates.Work)
                 {
+                    // 注意：智能暂停只在工作状态暂停，因为休息状态很可能触发用户不期望的用户离开事件，从而导致用户不期望的暂停
                     var result = _timer.Pause();
                     _logger?.Info($"Pause timer, result: {result}");
                 }
@@ -136,7 +146,7 @@ namespace Eyeshade.FuncModule
 
         public void SmartResume()
         {
-            _logger?.Info($"Smart resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            _logger?.Info($"Smart resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
             if (_isSmartPaused)
             {
                 _isSmartPaused = false;
@@ -243,7 +253,14 @@ namespace Eyeshade.FuncModule
             }
             else
             {
-                Work();
+                if (_isUserPaused || _isSmartPaused)
+                {
+                    WorkPause();
+                }
+                else
+                {
+                    Work();
+                }
             }
         }
 

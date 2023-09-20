@@ -88,19 +88,29 @@ namespace Eyeshade.FuncModule
 
         #region public methods
         /// <summary>
-        /// 重新开始计时，如果<see cref="IsPaused"/>=true则会取消暂停
+        /// 重新开始计时，如果<see cref="IsPaused"/>=true且keepPause==false则会取消暂停，如果keepPause==true则会强制停止计时
         /// </summary>
         /// <param name="totalTime">倒计时总时间，单位毫秒</param>
-        public void Reset(int totalTime)
+        /// <param name="forcePause">强制停止计时，默认为false</param>
+        public void Reset(int totalTime, bool forcePause = false)
         {
             if (totalTime < MiniTotalTime) throw new ArgumentOutOfRangeException(nameof(totalTime), $"Must >= {MiniTotalTime}");
 
             _totalTime = totalTime;
             _remainingTime = totalTime;
-            _timer.Change(TimerPeriod, TimerPeriod);
-            if (_isPaused)
+            if (!forcePause)
             {
-                _isPaused = false;
+                _timer.Change(TimerPeriod, TimerPeriod);
+                if (_isPaused)
+                {
+                    _isPaused = false;
+                    IsPausedChanged?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            else if (!_isPaused)
+            {
+                _timer.Change(Timeout.Infinite, Timeout.Infinite);
+                _isPaused = true;
                 IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
