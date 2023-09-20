@@ -66,28 +66,39 @@ namespace Eyeshade.FuncModule
         #endregion
 
         #region public methods
+        /// <summary>
+        /// 立刻进入工作倒计时，自动取消用户之前的暂停操作，但是不取消智能暂停
+        /// </summary>
         public void Work()
         {
             var workTime = _userConfig.WorkTime;
             _logger?.Info($"Work {workTime}");
-            _timer.Reset((int)workTime.TotalMilliseconds);
+
+            if (_isUserPaused)
+            {
+                _isUserPaused = false;
+                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+            }
+
+            _timer.Reset((int)workTime.TotalMilliseconds, forcePause: _isSmartPaused);
             _state = EyeshadeStates.Work;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public void WorkPause()
-        {
-            var workTime = _userConfig.WorkTime;
-            _logger?.Info($"WorkPause {workTime}");
-            _timer.Reset((int)workTime.TotalMilliseconds, forcePause: true);
-            _state = EyeshadeStates.Work;
-            StateChanged?.Invoke(this, EventArgs.Empty);
-        }
-
+        /// <summary>
+        /// 立刻进入休息倒计时，自动取消用户之前的暂停操作，忽略智能暂停
+        /// </summary>
         public void Rest()
         {
             var restingTime = _userConfig.RestingTime;
             _logger?.Info($"Rest {restingTime}");
+
+            if (_isUserPaused)
+            {
+                _isUserPaused = false;
+                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+            }
+
             _timer.Reset((int)restingTime.TotalMilliseconds);
             _state = EyeshadeStates.Resting;
             StateChanged?.Invoke(this, EventArgs.Empty);
@@ -253,14 +264,7 @@ namespace Eyeshade.FuncModule
             }
             else
             {
-                if (_isUserPaused || _isSmartPaused)
-                {
-                    WorkPause();
-                }
-                else
-                {
-                    Work();
-                }
+                Work();
             }
         }
 
