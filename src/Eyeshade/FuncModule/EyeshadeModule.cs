@@ -137,7 +137,7 @@ namespace Eyeshade.FuncModule
                 _isSmartPaused = true;
                 if (!_timer.IsPaused && _state == EyeshadeStates.Work)
                 {
-                    // 注意：智能暂停只在工作状态暂停，因为休息状态很可能触发用户不期望的用户离开事件，从而导致用户不期望的暂停
+                    // 注意：智能暂停只在工作状态暂停，因为休息状态很可能触发用户不期望的用户离开事件，从而导致用户不期望的在休息状态暂停
                     var result = _timer.Pause();
                     _logger?.Info($"Pause timer, result: {result}");
                 }
