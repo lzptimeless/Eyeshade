@@ -48,14 +48,16 @@ namespace Eyeshade.Views
                     {
                         _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
-                        _eyeshadeModule.IsUserPausedChanged -= EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsSleepedChanged -= EyeshadeModule_IsSleepedChanged;
                     }
                     _eyeshadeModule = value;
                     if (_eyeshadeModule != null)
                     {
                         _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
                         _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
-                        _eyeshadeModule.IsUserPausedChanged += EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
+                        _eyeshadeModule.IsSleepedChanged += EyeshadeModule_IsSleepedChanged;
                     }
                 }
             }
@@ -90,9 +92,12 @@ namespace Eyeshade.Views
             {
                 _eyeshadeModule.StateChanged -= EyeshadeModule_StateChanged;
                 _eyeshadeModule.ProgressChanged -= EyeshadeModule_ProgressChanged;
-                _eyeshadeModule.IsUserPausedChanged -= EyeshadeModule_IsPausedChanged;
+                _eyeshadeModule.IsPausedChanged -= EyeshadeModule_IsPausedChanged;
+                _eyeshadeModule.IsSleepedChanged -= EyeshadeModule_IsSleepedChanged;
             }
         }
+
+       
 
         private void AppWindow_Changed(Microsoft.UI.Windowing.AppWindow sender, Microsoft.UI.Windowing.AppWindowChangedEventArgs args)
         {
@@ -107,6 +112,17 @@ namespace Eyeshade.Views
         }
 
         private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
+        {
+            if (_isWindowVisible)
+            {
+                DispatcherQueue?.TryEnqueue(() =>
+                {
+                    ReadData();
+                });
+            }
+        }
+
+        private void EyeshadeModule_IsSleepedChanged(object? sender, EventArgs e)
         {
             if (_isWindowVisible)
             {
@@ -149,10 +165,10 @@ namespace Eyeshade.Views
 
             Data.RemainingMilliseconds = module.RemainingMilliseconds;
             Data.CountdownProgressValue = Math.Min(100, Math.Max(0, (int)(100 * module.Progress)));
-            Data.IsUserPaused = module.IsUserPaused;
+            Data.IsPaused = module.IsPaused;
             Data.EyeshadeState = module.State;
 
-            if (module.IsUserPaused)
+            if (module.IsPaused)
             {
                 if (PauseOrResumeCommand.Label != "恢复")
                 {
@@ -209,13 +225,13 @@ namespace Eyeshade.Views
             var module = EyeshadeModule;
             if (module == null) return;
 
-            if (module.IsUserPaused)
+            if (module.IsPaused)
             {
-                module.UserResume();
+                module.Resume();
             }
             else
             {
-                module.UserPause();
+                module.Pause();
             }
         }
 
@@ -294,16 +310,32 @@ namespace Eyeshade.Views
             }
         }
 
-        private bool _isUserPaused;
-        public bool IsUserPaused
+        private bool _isPaused;
+        public bool IsPaused
         {
-            get { return _isUserPaused; }
+            get { return _isPaused; }
             set
             {
-                if (_isUserPaused != value)
+                if (_isPaused != value)
                 {
-                    _isUserPaused = value;
+                    _isPaused = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(StateTitle));
+                }
+            }
+        }
+
+        private bool _isSleeped;
+        public bool IsSleeped
+        {
+            get { return _isSleeped; }
+            set
+            {
+                if (_isSleeped != value)
+                {
+                    _isSleeped = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(StateTitle));
                 }
             }
         }
@@ -330,7 +362,17 @@ namespace Eyeshade.Views
         {
             get
             {
-                return _eyeshadeState == EyeshadeStates.Work ? "工作中……" : "休息中……";
+                string title = _eyeshadeState == EyeshadeStates.Work ? "工作中……" : "休息中……";
+                if (_isPaused)
+                {
+                    title += "（已暂停）";
+                }
+                else if (_isSleeped)
+                {
+                    title += "（已休眠）";
+                }
+
+                return title;
             }
         }
 

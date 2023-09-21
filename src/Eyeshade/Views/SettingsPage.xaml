@@ -35,9 +35,9 @@
                         <FontIcon Glyph="&#xE767;" />
                     </Button>
                 </Grid>
-                <CheckBox Content="当用户离开电脑时自动暂停" Margin="0,20,0,0" 
-                          IsChecked="{x:Bind Data.AutoPauseWhenUserLeave, Mode=TwoWay}"
-                          ToolTipService.ToolTip="当用户离开电脑时自动暂停，判定条件：用户4分钟内没有任何输入且没有视频或游戏等防止锁屏的进程"/>
+                <CheckBox Content="当用户离开电脑时自动暂停（休眠）" Margin="0,20,0,0" 
+                          IsChecked="{x:Bind Data.SleepWhenUserLeave, Mode=TwoWay}"
+                          ToolTipService.ToolTip="当用户离开电脑时自动暂停（休眠），判定条件：用户4分钟内没有任何输入且没有视频或游戏等防止锁屏的进程"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

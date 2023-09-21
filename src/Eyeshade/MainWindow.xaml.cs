@@ -138,7 +138,8 @@ namespace Eyeshade
             var userDataFoler = App.Current.GetUserDataFolder();
             _eyeshadeModule = new EyeshadeModule(userDataFoler, logger);
             _eyeshadeModule.StateChanged += EyeshadeModule_StateChanged;
-            _eyeshadeModule.IsUserPausedChanged += EyeshadeModule_IsUserPausedChanged;
+            _eyeshadeModule.IsPausedChanged += EyeshadeModule_IsPausedChanged;
+            _eyeshadeModule.IsSleepedChanged += EyeshadeModule_IsSleepedChanged;
             _eyeshadeModule.ProgressChanged += EyeshadeModule_ProgressChanged;
         }
 
@@ -223,15 +224,15 @@ namespace Eyeshade
             var module = _eyeshadeModule;
             if (module == null) return;
 
-            if (_isSystemSuspended || _isScreenLocked || (_isUserLeaved && module.AutoPauseWhenUserLeave))
+            if (_isSystemSuspended || _isScreenLocked || (_isUserLeaved && module.SleepWhenUserLeave))
             {
-                module.SmartPause();
+                module.Sleep();
             }
             else
             {
-                if (module.IsSmartPaused)
+                if (module.IsSleeped)
                 {
-                    module.SmartResume();
+                    module.Awake();
                 }
             }
         }
@@ -329,14 +330,19 @@ namespace Eyeshade
             _eyeshadePreRemainingMilliseconds = remainningMilliseconds;
         }
 
-        private void EyeshadeModule_IsUserPausedChanged(object? sender, EventArgs e)
+        private void EyeshadeModule_IsPausedChanged(object? sender, EventArgs e)
         {
             var module = _eyeshadeModule;
             if (module != null)
             {
-                _trayIcon.SetMenuItem(1, module.IsUserPaused ? "恢复" : "暂停");
+                _trayIcon.SetMenuItem(1, module.IsPaused ? "恢复" : "暂停");
             }
 
+            _trayIcon.SetIcon(GetCurrentStateTrayIcon());
+        }
+
+        private void EyeshadeModule_IsSleepedChanged(object? sender, EventArgs e)
+        {
             _trayIcon.SetIcon(GetCurrentStateTrayIcon());
         }
 
@@ -347,9 +353,10 @@ namespace Eyeshade
             if (module != null)
             {
                 var progress = module.Progress;
-
-                if (module.IsUserPaused) trayIcon = @"Images\TrayIcon\pause.ico";
+                
+                if (module.IsPaused) trayIcon = @"Images\TrayIcon\pause.ico";
                 else if (module.State == EyeshadeStates.Resting) trayIcon = @"Images\TrayIcon\resting.ico";
+                else if (module.IsSleeped) trayIcon = @"Images\TrayIcon\sleep.ico";
                 else if (progress > 0.75) trayIcon = @"Images\TrayIcon\100.ico";
                 else if (progress > 0.5) trayIcon = @"Images\TrayIcon\75.ico";
                 else if (progress > 0.25) trayIcon = @"Images\TrayIcon\50.ico";
@@ -422,13 +429,13 @@ namespace Eyeshade
                         var module = _eyeshadeModule;
                         if (module != null)
                         {
-                            if (module.IsUserPaused)
+                            if (module.IsPaused)
                             {
-                                module.UserResume();
+                                module.Resume();
                             }
                             else
                             {
-                                module.UserPause();
+                                module.Pause();
                             }
                         }
                     }

@@ -24,13 +24,13 @@ namespace Eyeshade.FuncModule
         /// </summary>
         private EyeshadeStates _state;
         /// <summary>
-        /// 用户是否已请求暂停计时，即调用UserPause()
+        /// 用户是否已请求暂停计时，即调用Pause()
         /// </summary>
-        private bool _isUserPaused;
+        private bool _isPaused;
         /// <summary>
-        /// 是否已智能暂停计时，即调用SmartPause()
+        /// 是否已休眠（智能暂停计时），即调用Sleep()
         /// </summary>
-        private bool _isSmartPaused;
+        private bool _isSleeped;
         #endregion
 
         public EyeshadeModule(string userDataFolder, ILogWrapper? logger)
@@ -50,53 +50,54 @@ namespace Eyeshade.FuncModule
         public TimeSpan RestingTime => _userConfig.RestingTime;
         public TimeSpan NotifyTime => _userConfig.NotifyTime;
         public int RingerVolume => _userConfig.RingerVolume;
-        public bool AutoPauseWhenUserLeave => _userConfig.AutoPauseWhenUserLeave;
+        public bool SleepWhenUserLeave => _userConfig.SleepWhenUserLeave;
         public int TotalMilliseconds => _timer.TotalTime;
         public int RemainingMilliseconds => _timer.RemainingTime;
         public double Progress => _timer.Progress;
-        public bool IsUserPaused => _isUserPaused;
-        public bool IsSmartPaused => _isSmartPaused;
+        public bool IsPaused => _isPaused;
+        public bool IsSleeped => _isSleeped;
         public EyeshadeStates State => _state;
         #endregion
 
         #region events
         public event EventHandler? StateChanged;
         public event EventHandler? ProgressChanged;
-        public event EventHandler? IsUserPausedChanged;
+        public event EventHandler? IsPausedChanged;
+        public event EventHandler? IsSleepedChanged;
         #endregion
 
         #region public methods
         /// <summary>
-        /// 立刻进入工作倒计时，自动取消用户之前的暂停操作，但是不取消智能暂停
+        /// 立刻进入工作倒计时，自动取消用户之前的暂停操作，但是不取消休眠
         /// </summary>
         public void Work()
         {
             var workTime = _userConfig.WorkTime;
             _logger?.Info($"Work {workTime}");
 
-            if (_isUserPaused)
+            if (_isPaused)
             {
-                _isUserPaused = false;
-                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+                _isPaused = false;
+                IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
 
-            _timer.Reset((int)workTime.TotalMilliseconds, forcePause: _isSmartPaused);
+            _timer.Reset((int)workTime.TotalMilliseconds, forcePause: _isSleeped);
             _state = EyeshadeStates.Work;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>
-        /// 立刻进入休息倒计时，自动取消用户之前的暂停操作，忽略智能暂停
+        /// 立刻进入休息倒计时，自动取消用户之前的暂停操作，忽略休眠标识
         /// </summary>
         public void Rest()
         {
             var restingTime = _userConfig.RestingTime;
             _logger?.Info($"Rest {restingTime}");
 
-            if (_isUserPaused)
+            if (_isPaused)
             {
-                _isUserPaused = false;
-                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+                _isPaused = false;
+                IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
 
             _timer.Reset((int)restingTime.TotalMilliseconds);
@@ -110,62 +111,64 @@ namespace Eyeshade.FuncModule
             _timer.Defer((int)value.TotalMilliseconds);
         }
 
-        public void UserPause()
+        public void Pause()
         {
-            _logger?.Info($"User pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            if (!_isUserPaused)
+            _logger?.Info($"User pause, paused: {_isPaused}, sleeped: {_isSleeped}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (!_isPaused)
             {
-                _isUserPaused = true;
+                _isPaused = true;
                 if (!_timer.IsPaused)
                 {
                     var result = _timer.Pause();
                     _logger?.Info($"Pause timer, result: {result}");
                 }
-                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+                IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        public void UserResume()
+        public void Resume()
         {
-            _logger?.Info($"User resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            if (_isUserPaused)
+            _logger?.Info($"User resume, paused: {_isPaused}, sleeped: {_isSleeped}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (_isPaused)
             {
-                _isUserPaused = false;
-                if (!_isSmartPaused)
+                _isPaused = false;
+                if (!_isSleeped)
                 {
                     var result = _timer.Resume();
                     _logger?.Info($"Resume timer, result: {result}");
                 }
-                IsUserPausedChanged?.Invoke(this, EventArgs.Empty);
+                IsPausedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        public void SmartPause()
+        public void Sleep()
         {
-            _logger?.Info($"Smart pause, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            if (!_isSmartPaused)
+            _logger?.Info($"Smart pause, paused: {_isPaused}, sleeped: {_isSleeped}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (!_isSleeped)
             {
-                _isSmartPaused = true;
+                _isSleeped = true;
                 if (!_timer.IsPaused && _state == EyeshadeStates.Work)
                 {
-                    // 注意：智能暂停只在工作状态暂停，因为休息状态很可能触发用户不期望的用户离开事件，从而导致用户不期望的在休息状态暂停
+                    // 注意：休眠只在工作状态暂停，因为休息状态很可能触发用户不期望的用户离开事件，从而导致用户不期望的在休息状态休眠
                     var result = _timer.Pause();
                     _logger?.Info($"Pause timer, result: {result}");
                 }
+                IsSleepedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
-        public void SmartResume()
+        public void Awake()
         {
-            _logger?.Info($"Smart resume, user_paused: {_isUserPaused}, smart_paused: {_isSmartPaused}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
-            if (_isSmartPaused)
+            _logger?.Info($"Smart resume, paused: {_isPaused}, sleeped: {_isSleeped}, state: {_state}, remaining: {TimeSpan.FromMilliseconds(_timer.RemainingTime)}");
+            if (_isSleeped)
             {
-                _isSmartPaused = false;
-                if (!_isUserPaused)
+                _isSleeped = false;
+                if (!_isPaused)
                 {
                     var result = _timer.Resume();
                     _logger?.Info($"Resume timer, result: {result}");
                 }
+                IsSleepedChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -215,11 +218,11 @@ namespace Eyeshade.FuncModule
             _userConfig.Save();
         }
 
-        public void SetAutoPauseWhenUserLeave(bool value)
+        public void SetSleepWhenUserLeave(bool value)
         {
-            if (_userConfig.AutoPauseWhenUserLeave == value) return;
+            if (_userConfig.SleepWhenUserLeave == value) return;
 
-            _userConfig.AutoPauseWhenUserLeave = value;
+            _userConfig.SleepWhenUserLeave = value;
             _userConfig.Save();
         }
 

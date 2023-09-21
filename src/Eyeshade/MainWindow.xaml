@@ -18,7 +18,7 @@
         </Grid.RowDefinitions>
         <Rectangle x:Name="RestingBackground" Grid.RowSpan="2" Visibility="Collapsed" Fill="{ThemeResource SolidBackgroundFillColorBaseAltBrush}"/>
         <StackPanel x:Name="AppTitleBar" Height="30" Orientation="Horizontal">
-            <Image Source="Images/logo.png"
+            <Image Source="logo.ico"
                    Stretch="Uniform"
                    Width="16" Height="16" 
                    Margin="8,0"/>

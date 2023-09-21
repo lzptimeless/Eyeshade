@@ -218,14 +218,14 @@ namespace Eyeshade.Views
                 }
             }
         }
-        public bool AutoPauseWhenUserLeave
+        public bool SleepWhenUserLeave
         {
-            get { return EyeshadeModule != null ? EyeshadeModule.AutoPauseWhenUserLeave : false; }
+            get { return EyeshadeModule != null ? EyeshadeModule.SleepWhenUserLeave : false; }
             set
             {
-                if (EyeshadeModule != null && value != EyeshadeModule.AutoPauseWhenUserLeave)
+                if (EyeshadeModule != null && value != EyeshadeModule.SleepWhenUserLeave)
                 {
-                    EyeshadeModule.SetAutoPauseWhenUserLeave(value);
+                    EyeshadeModule.SetSleepWhenUserLeave(value);
                     OnPropertyChanged();
                 }
             }
